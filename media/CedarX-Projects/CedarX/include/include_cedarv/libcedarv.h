@@ -31,8 +31,7 @@ extern "C" {
         CEDARV_STREAM_FORMAT_VC1,
         CEDARV_STREAM_FORMAT_AVS,
         CEDARV_STREAM_FORMAT_MJPEG,  
-        CEDARV_STREAM_FORMAT_VP8,
-        CEDARV_STREAM_FORMAT_NETWORK
+        CEDARV_STREAM_FORMAT_VP8
     }cedarv_stream_format_e;
     
     typedef enum CEDARV_SUB_FORMAT
@@ -49,9 +48,7 @@ extern "C" {
         CEDARV_MPEG4_SUB_FORMAT_RMG2,		//* H263 coded video stream muxed in '.rm' file.
         CEDARV_MPEG4_SUB_FORMAT_VP6,
         CEDARV_MPEG4_SUB_FORMAT_WMV1,
-        CEDARV_MPEG4_SUB_FORMAT_WMV2,
-        CEDARV_MPEG4_SUB_FORMAT_DIVX2,		//MSMPEG4V2
-        CEDARV_MPEG4_SUB_FORMAT_DIVX1,		//MSMPEG4V1
+        CEDARV_MPEG4_SUB_FORMAT_WMV2
     }cedarv_sub_format_e;
     
     typedef enum CEDARV_CONTAINER_FORMAT
@@ -69,7 +66,6 @@ extern "C" {
     	CEDARV_CONTAINER_FORMAT_TS,
     	CEDARV_CONTAINER_FORMAT_VOB,
     	CEDARV_CONTAINER_FORMAT_WEBM,
-    	CEDARV_CONTAINER_FORMAT_OGM,
     }cedarv_container_format_e;
 
 	typedef enum CEDARV_3D_MODE
@@ -125,7 +121,6 @@ extern "C" {
     #define CEDARV_FLAG_FIRST_PART  		0x8
     #define CEDARV_FLAG_LAST_PART   		0x10
 	#define CEDARV_FLAG_MPEG4_EMPTY_FRAME	0x20
-	#define CEDARV_FLAG_DECODE_NO_DELAY     0x40000000
     #define CEDARV_FLAG_DATA_INVALID 		0x80000000
     
     typedef struct CEDARV_STREAM_DATA_INFORMATION
@@ -133,7 +128,6 @@ extern "C" {
         u32 flags;
         u32 lengh;
         u64 pts;
-        u32	type;
     }cedarv_stream_data_info_t;
     
     
@@ -155,18 +149,11 @@ extern "C" {
         CEDARV_PIXEL_FORMAT_YUV420     = 0xd,
         CEDARV_PIXEL_FORMAT_YUV411     = 0xe,
         CEDARV_PIXEL_FORMAT_CSIRGB     = 0xf,
-        CEDARV_PIXEL_FORMAT_MB_UV_COMBINE_YUV420  = 0x10,
-        CEDARV_PIXEL_FORMAT_MB_UV_COMBINE_YUV422  = 0x11,
-        CEDARV_PIXEL_FORMAT_MB_UV_COMBINE_YUV411  = 0x12,
-        CEDARV_PIXEL_FORMAT_PLANNER_YUV420        = 0x13,
-        CEDARV_PIXEL_FORMAT_PLANNER_YVU420        = 0x14
+        CEDARV_PIXEL_FORMAT_AW_YUV420  = 0x10,
+        CEDARV_PIXEL_FORMAT_AW_YUV422  = 0x11,
+        CEDARV_PIXEL_FORMAT_AW_YUV411  = 0x12
     }cedarv_pixel_format_e;
-	
-	#define CEDARV_PIXEL_FORMAT_AW_YUV420 CEDARV_PIXEL_FORMAT_MB_UV_COMBINE_YUV420
-	#define CEDARV_PIXEL_FORMAT_AW_YUV422 CEDARV_PIXEL_FORMAT_MB_UV_COMBINE_YUV422
-	#define CEDARV_PIXEL_FORMAT_AW_YUV411 CEDARV_PIXEL_FORMAT_MB_UV_COMBINE_YUV411
     
-	#define CEDARV_PICT_PROP_NO_SYNC   0x1
         
     typedef struct CEDARV_PICTURE_INFORMATION
     {
@@ -186,7 +173,6 @@ extern "C" {
         u8                      vertical_scale_ratio;   //* what ratio this picture has been scaled down at vetical size, 0: 1/1, 1: 1/2, 2: 1/4, 3: 1/8;
         u32                     frame_rate;             //* frame_rate, multiplied by 1000;
         u32                     aspect_ratio;           //* pixel width to pixel height ratio, multiplied by 1000;
-        u32                     pict_prop;              //* picture property flags
         u8                      is_progressive;         //* progressive or interlace picture;
         u8                      top_field_first;        //* display top field first;
         u8                      repeat_top_field;       //* if interlace picture, whether repeat the top field when display;
@@ -220,10 +206,6 @@ extern "C" {
 
         u32						display_3d_mode;		//* this value has nothing to do with decoder, it is used for video render to
         												//* pass display mode to overlay module.
-        u32                     flag_addr;//dit maf flag address
-        u32                     flag_stride;//dit maf flag line stride
-        u8                      maf_valid;
-        u8                      pre_frame_valid;
     }cedarv_picture_t;
     
     typedef enum CEDARV_RESULT
@@ -233,7 +215,6 @@ extern "C" {
         CEDARV_RESULT_KEYFRAME_DECODED        = 0x3,      //* decode operation decodes one key frame;
         CEDARV_RESULT_NO_FRAME_BUFFER         = 0x4,      //* fail when try to get an empty frame buffer;
         CEDARV_RESULT_NO_BITSTREAM            = 0x5,      //* fail when try to get bitstream frame;
-        CEDARV_RESULT_MULTI_PIXEL			  = 0x6,      //* support multi_pixel;
         
         CEDARV_RESULT_ERR_FAIL                = -1,       //* operation fail;
         CEDARV_RESULT_ERR_INVALID_PARAM       = -2,       //* failure caused by invalid function parameter;
@@ -264,7 +245,6 @@ extern "C" {
         CEDARV_COMMAND_ROTATE,
         CEDARV_COMMAND_SET_TOTALMEMSIZE,
 
-        CEDARV_COMMAND_DROP_B_FRAME,
         CEDARV_COMMAND_DISABLE_3D,
         CEDARV_COMMAN_SET_SYS_TIME,
         //* for preview application.
@@ -290,17 +270,7 @@ extern "C" {
         CEDARV_COMMAND_CLOSE_ANAGLATH_TRANSFROM,	//* close ve anaglath transformation
         CEDARV_COMMAND_GET_CHIP_VERSION,
 
-        CEDARV_COMMAND_FLUSH,
-        CEDARV_COMMAND_CLOSE_MAF,
-        CEDARV_COMMAND_SET_DEMUX_TYPE,
-        CEDARV_COMMAND_DECODE_NO_DELAY,
-		CEDARV_COMMAND_SET_DYNAMIC_ROTATE_ANGLE,
-        CEDARV_COMMAND_DYNAMIC_ROTATE,
-        CEDARV_COMMAND_SET_VBV_SIZE,
-        CEDARV_COMMAND_SET_PIXEL_FORMAT,			//1633
-        CEDARV_COMMAND_MULTI_PIXEL,
-        CEDARV_COMMAND_OPEN_YV32_TRANSFROM,
-        CEDARV_COMMAND_CLOSE_YV32_TRANSFROM
+        CEDARV_COMMAND_FLUSH
     }cedarv_io_cmd_e;
     
     
@@ -331,8 +301,6 @@ extern "C" {
         
         s32 (*display_request)(cedarv_decoder_t* p, cedarv_picture_t* picture);
         s32 (*display_release)(cedarv_decoder_t* p, u32 frame_index);
-        s32 (*picture_ready)(cedarv_decoder_t* p);
-        s32 (*display_dump_picture)(cedarv_decoder_t* p, cedarv_picture_t* picture);
         s32 (*set_vstream_info)(cedarv_decoder_t* p, cedarv_stream_info_t* info);
         
         s32 (*query_quality)(cedarv_decoder_t* p, cedarv_quality_t* vq);
@@ -343,14 +311,14 @@ extern "C" {
         void *cedarx_cookie;
     };
 
-
-cedarv_decoder_t* libcedarv_init(s32 *ret);
-s32 libcedarv_exit(cedarv_decoder_t* p);
 #ifdef __cplusplus
 }
 #endif
 
+cedarv_decoder_t* libcedarv_init(s32 *ret);
+s32 libcedarv_exit(cedarv_decoder_t* p);
 
+void libcedarv_free_vbs_buffer_sem(void);
 
 #endif
 

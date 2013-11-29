@@ -677,11 +677,6 @@ public class AudioService extends IAudioService.Stub {
     public void setStreamMute(int streamType, boolean state, IBinder cb) {
         if (isStreamAffectedByMute(streamType)) {
             mStreamStates[streamType].mute(cb, state);
-            /* add by Gary. start {{----------------------------------- */
-            /* 2011-10-27 */
-            /* support mute */
-			mVolumePanel.postVolumeChanged(streamType, AudioManager.FLAG_SHOW_UI);
-            /* add by Gary. end   -----------------------------------}} */
         }
     }
 

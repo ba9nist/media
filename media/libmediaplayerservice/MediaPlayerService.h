@@ -112,6 +112,7 @@ class MediaPlayerService : public BnMediaPlayerService
         float                   mLeftVolume;
         float                   mRightVolume;
         float                   mMsecsPerFrame;
+        uint32_t                mLatency;
         int                     mSessionId;
         float                   mSendLevel;
         int                     mAuxEffectId;
@@ -262,19 +263,6 @@ public:
     virtual int                 getBlackExtend();
     /* add by Gary. end   -----------------------------------}} */
 
-    /* add by Gary. start {{----------------------------------- */
-    /* 2012-03-12 */
-    /* add the global interfaces to control the subtitle gate  */
-    virtual status_t            setGlobalSubGate(bool showSub);
-    virtual bool                getGlobalSubGate();
-    /* add by Gary. end   -----------------------------------}} */
-
-    /* add by Gary. start {{----------------------------------- */
-    /* 2012-4-24 */
-    /* add two general interfaces for expansibility */
-    virtual status_t            generalGlobalInterface(int cmd, int int1, int int2, int int3, void *p);
-    /* add by Gary. end   -----------------------------------}} */
-
 private:
 
     class Client : public BnMediaPlayer {
@@ -370,19 +358,6 @@ private:
         virtual status_t        setBlackExtend(int value);
         /* add by Gary. end   -----------------------------------}} */
 
-        /* add by Gary. start {{----------------------------------- */
-        /* 2012-03-07 */
-        /* set audio channel mute */
-        virtual status_t        setChannelMuteMode(int muteMode);
-        virtual int             getChannelMuteMode();
-        /* add by Gary. end   -----------------------------------}} */
-
-        /* add by Gary. start {{----------------------------------- */
-        /* 2012-4-24 */
-        /* add two general interfaces for expansibility */
-        virtual status_t        generalInterface(int cmd, int int1, int int2, int int3, void *p);
-        /* add by Gary. end   -----------------------------------}} */
-
         sp<MediaPlayerBase>     createPlayer(player_type playerType);
 
         virtual status_t        setDataSource(
@@ -392,8 +367,6 @@ private:
         virtual status_t        setDataSource(int fd, int64_t offset, int64_t length);
 
         virtual status_t        setDataSource(const sp<IStreamSource> &source);
-
-        virtual status_t        setDataSource(const sp<IStreamSource> &source, int type);
 
         static  void            notify(void* cookie, int msg,
                                        int ext1, int ext2, const Parcel *obj);
@@ -460,9 +433,6 @@ private:
                     int                         mSubDelay;
                     int                         mSubFontSize;
                     char                        mSubCharset[MEDIAPLAYER_NAME_LEN_MAX];
-					int                         mSubIndex;
-				    int                         mTrackIndex;
-                    int                         mMuteMode;   // 2012-03-07, set audio channel mute
                     /* add by Gary. end   -----------------------------------}} */
 
                     /* add by Gary. start {{----------------------------------- */
@@ -521,11 +491,7 @@ private:
                 int                         mChromaSharp;
                 int                         mWhiteExtend;
                 int                         mBlackExtend;
-                bool                        mGlobalSubGate;  // 2012-03-12, add the global interfaces to control the subtitle gate
                 /* add by Gary. end   -----------------------------------}} */
-                /*Start by Bevis. Detect http data source from other application.*/
-                wp<Client> mDetectClient;
-                /*Start by Bevis. Detect http data source from other application.*/
 };
 
 // ----------------------------------------------------------------------------

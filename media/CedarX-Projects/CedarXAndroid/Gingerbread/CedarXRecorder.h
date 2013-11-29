@@ -23,7 +23,6 @@
 #include <binder/MemoryBase.h>
 #include <binder/MemoryHeapBase.h>
 #include <media/AudioRecord.h>
-#include <CDX_PlayerAPI.h>
 
 namespace android {
 
@@ -130,7 +129,6 @@ private:
 	bool				bRecorderRunning;
 	uint 				mRecModeFlag;
 	AudioRecord 		* mRecord;
-	CDXRecorder 		*mCdxRecorder;
 
 	int64_t				mLatencyStartUs;
 #define AUDIO_LATENCY_TIME	900000		// US

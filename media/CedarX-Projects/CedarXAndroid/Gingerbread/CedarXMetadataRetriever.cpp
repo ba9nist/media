@@ -29,7 +29,6 @@
 #include <media/stagefright/OMXCodec.h>
 #include <byteswap.h>
 
-#include <CDX_UglyDef.h>
 #include <CDX_PlayerAPI.h>
 #include <stdio.h>
 
@@ -320,86 +319,66 @@ const char *CedarXMetadataRetriever::extractMetadata(int keyCode) {
 }
 
 void CedarXMetadataRetriever::parseMetaData() {
-	CedarXMetaData cdx_metadata;
-	audio_file_info_t *audio_metadata;
+	audio_file_info_t audio_metadata;
     /* modified by Gary. start {{----------------------------------- */
     String8 s8;
     int     ret;
     
 	//LOGV("begin CDX_CMD_GET_METADATA mRetriever:%p",mRetriever);
-    mRetriever->control(mRetriever, CDX_CMD_GET_METADATA, (unsigned int)&cdx_metadata, 0);
+    mRetriever->control(mRetriever, CDX_CMD_GET_METADATA, (unsigned int)&audio_metadata, 0);
     LOGV("add meta data...");
     
-    audio_metadata = &cdx_metadata.audio_metadata;
+//    ret = _Convert2UTF8( (uint8_t *)audio_metadata.ulAudio_name, audio_metadata.ulAudio_name_sz,
+//                         audio_metadata.ulAudio_nameCharEncode, &s8 );
+//    if( ret == 0 )
+//    {
+//      	mMetaData.add(METADATA_KEY_MIMETYPE, s8);
+//    }
     
-    if(cdx_metadata.cdx_metadata_type == CDX_METADATA_TYPE_AUDIO) {
-	//    ret = _Convert2UTF8( (uint8_t *)audio_metadata->ulAudio_name, audio_metadata->ulAudio_name_sz,
-	//                         audio_metadata->ulAudio_nameCharEncode, &s8 );
-	//    if( ret == 0 )
-	//    {
-	//      	mMetaData.add(METADATA_KEY_MIMETYPE, s8);
-	//    }
+    ret = _Convert2UTF8( (uint8_t *)audio_metadata.ulauthor, audio_metadata.ulauthor_sz,
+                         audio_metadata.ulauthorCharEncode, &s8 );
+    if( ret == 0 )
+    {
+       	mMetaData.add(METADATA_KEY_ARTIST, s8);
+       	mMetaData.add(METADATA_KEY_ALBUMARTIST, s8);
+       	mMetaData.add(METADATA_KEY_AUTHOR, s8);
+    	mMetaData.add(METADATA_KEY_WRITER, s8);
+    }
+    
+    ret = _Convert2UTF8( (uint8_t *)audio_metadata.ulGenre, audio_metadata.ulGenre_sz,
+                         audio_metadata.ulGenreCharEncode, &s8 );
+    if( ret == 0 )
+    {
+      	mMetaData.add(METADATA_KEY_GENRE, s8);
+    }
+    
+    ret = _Convert2UTF8( (uint8_t *)audio_metadata.ultitle, audio_metadata.ultitle_sz,
+                         audio_metadata.ultitleCharEncode, &s8 );
+    if( ret == 0 )
+    {
+      	mMetaData.add(METADATA_KEY_TITLE, s8);
+    }
+    
+    ret = _Convert2UTF8( (uint8_t *)audio_metadata.ulYear, audio_metadata.ulYear_sz,
+                         audio_metadata.ulYearCharEncode, &s8 );
+    if( ret == 0 )
+    {
+      	mMetaData.add(METADATA_KEY_YEAR, s8);
+    }
 
-		ret = _Convert2UTF8( (uint8_t *)audio_metadata->ulauthor, audio_metadata->ulauthor_sz,
-							 audio_metadata->ulauthorCharEncode, &s8 );
-		if( ret == 0 )
+	if( audio_metadata.ulDuration > 0 )
+	{
+		char   *str = NULL;
+
+		str = new char[32];
+		if( str != NULL )
 		{
-			mMetaData.add(METADATA_KEY_ARTIST, s8);
-			mMetaData.add(METADATA_KEY_ALBUMARTIST, s8);
-			mMetaData.add(METADATA_KEY_AUTHOR, s8);
-			mMetaData.add(METADATA_KEY_WRITER, s8);
-		}
-
-		ret = _Convert2UTF8( (uint8_t *)audio_metadata->ulGenre, audio_metadata->ulGenre_sz,
-							 audio_metadata->ulGenreCharEncode, &s8 );
-		if( ret == 0 )
-		{
-			mMetaData.add(METADATA_KEY_GENRE, s8);
-		}
-
-		ret = _Convert2UTF8( (uint8_t *)audio_metadata->ultitle, audio_metadata->ultitle_sz,
-							 audio_metadata->ultitleCharEncode, &s8 );
-		if( ret == 0 )
-		{
-			mMetaData.add(METADATA_KEY_TITLE, s8);
-		}
-
-		ret = _Convert2UTF8( (uint8_t *)audio_metadata->ulYear, audio_metadata->ulYear_sz,
-							 audio_metadata->ulYearCharEncode, &s8 );
-		if( ret == 0 )
-		{
-			mMetaData.add(METADATA_KEY_YEAR, s8);
-		}
-
-		if( audio_metadata->ulDuration > 0 )
-		{
-			char   *str = NULL;
-
-			str = new char[32];
-			if( str != NULL )
-			{
-				sprintf( str, "%d", audio_metadata->ulDuration);
-				mMetaData.add(METADATA_KEY_DURATION, String8(str));
-				delete[] str;
-			}
-		}
-		/* modified by Gary. end   -----------------------------------}} */
-	}
-	else {
-		if(cdx_metadata.duration > 0 )
-		{
-			char   *str = NULL;
-
-			str = new char[32];
-			if( str != NULL )
-			{
-				sprintf( str, "%d", cdx_metadata.duration);
-				LOGV("METADATA_KEY_DURATION:%d", cdx_metadata.duration);
-				mMetaData.add(METADATA_KEY_DURATION, String8(str));
-				delete[] str;
-			}
+			sprintf( str, "%d", audio_metadata.ulDuration);
+			mMetaData.add(METADATA_KEY_DURATION, String8(str));
+			delete[] str;
 		}
 	}
+    /* modified by Gary. end   -----------------------------------}} */
     
 //    { kKeyMIMEType, METADATA_KEY_MIMETYPE },//ulAudio_name_sz
 //    { kKeyCDTrackNumber, METADATA_KEY_CD_TRACK_NUMBER },
@@ -501,7 +480,7 @@ static int _IsUTF8Stream( const char* bytes, int size )
             case 0x05:
             case 0x06:
             case 0x07: {
-                // Bit pattern 0. No need for any extra bytes.
+                // Bit pattern 0xxx. No need for any extra bytes.
                 break;
             }
             case 0x08:

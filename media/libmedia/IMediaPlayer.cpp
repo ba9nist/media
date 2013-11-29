@@ -28,10 +28,6 @@
 #include <gui/ISurfaceTexture.h>
 #include <utils/String8.h>
 
-#undef LOG_TAG
-#define LOG_TAG "IMediaPlayer"
-#include <utils/Log.h>
-
 namespace android {
 
 enum {
@@ -102,21 +98,6 @@ enum {
     /* support scale mode */
     ENABLE_SCALE_MODE,
     /* add by Gary. end   -----------------------------------}} */
-
-    /* add by Gary. start {{----------------------------------- */
-    /* 2012-03-07 */
-    /* set audio channel mute */
-    SET_CHANNEL_MUTE_MODE,
-    GET_CHANNEL_MUTE_MODE,
-    /* add by Gary. end   -----------------------------------}} */
-
-    /* add by Gary. start {{----------------------------------- */
-    /* 2012-4-24 */
-    /* add two general interfaces for expansibility */
-    GENERAL_INTERFACE,
-    /* add by Gary. end   -----------------------------------}} */
-
-    SET_DATA_SOURCE_STREAM2,
 };
 
 class BpMediaPlayer: public BpInterface<IMediaPlayer>
@@ -172,15 +153,6 @@ public:
         remote()->transact(SET_DATA_SOURCE_STREAM, data, &reply);
         return reply.readInt32();
     }
-
-    status_t setDataSource(const sp<IStreamSource> &source, int type) {
-		Parcel data, reply;
-		data.writeInterfaceToken(IMediaPlayer::getInterfaceDescriptor());
-		data.writeStrongBinder(source->asBinder());
-		data.writeInt32(type);
-		remote()->transact(SET_DATA_SOURCE_STREAM2, data, &reply);
-		return reply.readInt32();
-	}
 
     // pass the buffered ISurfaceTexture to the media player service
     status_t setVideoSurfaceTexture(const sp<ISurfaceTexture>& surfaceTexture)
@@ -702,54 +674,6 @@ public:
     }
     /* add by Gary. end   -----------------------------------}} */    
 
-    /* add by Gary. start {{----------------------------------- */
-    /* 2012-03-07 */
-    /* set audio channel mute */
-    status_t setChannelMuteMode(int muteMode)
-    {
-        Parcel data, reply;
-        data.writeInterfaceToken(IMediaPlayer::getInterfaceDescriptor());
-        data.writeInt32(muteMode);
-        remote()->transact(SET_CHANNEL_MUTE_MODE, data, &reply);
-        return reply.readInt32();
-    }
-    
-    int getChannelMuteMode()
-    {
-        Parcel data, reply;
-        data.writeInterfaceToken(IMediaPlayer::getInterfaceDescriptor());
-        remote()->transact(GET_CHANNEL_MUTE_MODE, data, &reply);
-        return reply.readInt32();
-    }
-    /* add by Gary. end   -----------------------------------}} */
-    
-    /* add by Gary. start {{----------------------------------- */
-    /* 2012-4-24 */
-    /* add two general interfaces for expansibility */
-    status_t generalInterface(int cmd, int int1, int int2, int int3, void *p)
-    {
-        Parcel data, reply;
-        status_t ret;
-        data.writeInterfaceToken(IMediaPlayer::getInterfaceDescriptor());
-        
-        data.writeInt32(cmd);                               // the first input value MUST be always the command.
-        switch(cmd){
-            case MEDIAPLAYER_CMD_SET_BD_FOLDER_PLAY_MODE:{
-                data.writeInt32(int1);
-                remote()->transact(GENERAL_INTERFACE, data, &reply);
-                ret = reply.readInt32();
-            }break;
-            case MEDIAPLAYER_CMD_GET_BD_FOLDER_PLAY_MODE:{
-                remote()->transact(GENERAL_INTERFACE, data, &reply);
-                ret = reply.readInt32();
-                *((int *)p) = reply.readInt32();
-            }break;
-            default:
-                return BAD_VALUE;
-        }
-        return ret;
-    }
-    /* add by Gary. end   -----------------------------------}} */
 };
 
 IMPLEMENT_META_INTERFACE(MediaPlayer, "android.media.IMediaPlayer");
@@ -793,14 +717,6 @@ status_t BnMediaPlayer::onTransact(
             reply->writeInt32(setDataSource(source));
             return NO_ERROR;
         }
-        case SET_DATA_SOURCE_STREAM2: {
-			CHECK_INTERFACE(IMediaPlayer, data, reply);
-			sp<IStreamSource> source =
-				interface_cast<IStreamSource>(data.readStrongBinder());
-			int32_t type = data.readInt32();
-			reply->writeInt32(setDataSource(source, type));
-			return NO_ERROR;
-		}
         case SET_VIDEO_SURFACETEXTURE: {
             CHECK_INTERFACE(IMediaPlayer, data, reply);
             sp<ISurfaceTexture> surfaceTexture =
@@ -1178,53 +1094,6 @@ status_t BnMediaPlayer::onTransact(
             int width = data.readInt32();
             int height = data.readInt32();
             reply->writeInt32(enableScaleMode(type, width, height));
-            return NO_ERROR;
-        } break;
-        /* add by Gary. end   -----------------------------------}} */
-
-        /* add by Gary. start {{----------------------------------- */
-        /* 2012-03-07 */
-        /* set audio channel mute */
-        case SET_CHANNEL_MUTE_MODE: {      
-            CHECK_INTERFACE(IMediaPlayer, data, reply);
-            reply->writeInt32(setChannelMuteMode(data.readInt32()));
-            return NO_ERROR;
-        } break;
-        case GET_CHANNEL_MUTE_MODE: {      
-            CHECK_INTERFACE(IMediaPlayer, data, reply);
-            reply->writeInt32(getChannelMuteMode());
-            return NO_ERROR;
-        } break;
-        /* add by Gary. end   -----------------------------------}} */
-        /* add by Gary. start {{----------------------------------- */
-        /* 2012-4-24 */
-        /* add two general interfaces for expansibility */
-        case GENERAL_INTERFACE: {      
-            CHECK_INTERFACE(IMediaPlayer, data, reply);
-            int cmd;
-            int int1 = 0;
-            int int2 = 0;
-            int int3 = 0;
-            void *p  = NULL;
-            status_t ret;
-            
-            cmd = data.readInt32();
-            switch(cmd){
-                case MEDIAPLAYER_CMD_SET_BD_FOLDER_PLAY_MODE:{
-                    int1 = data.readInt32();
-                    ret = generalInterface(cmd, int1, int2, int3, p);
-                    reply->writeInt32(ret);
-                }break;
-                case MEDIAPLAYER_CMD_GET_BD_FOLDER_PLAY_MODE:{
-                    int play_mode;
-                    p = &play_mode;
-                    ret = generalInterface(cmd, int1, int2, int3, p);
-                    reply->writeInt32(ret);
-                    reply->writeInt32(play_mode);
-                }break;
-                default:
-                    return BAD_VALUE;
-            }
             return NO_ERROR;
         } break;
         /* add by Gary. end   -----------------------------------}} */

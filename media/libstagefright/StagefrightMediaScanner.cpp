@@ -43,7 +43,7 @@ static bool FileHasAcceptableExtension(const char *extension) {
        , ".mp1", ".mp2", ".awb", ".oga", ".ape", ".ac3",
        ".dts", ".omg", ".oma", ".midi", ".m4v", ".wmv", ".asf",
        ".m2ts", ".rmvb", ".rm", ".mov", ".flv", ".f4v",
-       ".vob", ".pmp", ".m4r", ".ra", ".divx", ".adts"
+       ".vob", ".pmp", ".m4r", ".ra"
        /* add by Gary. end   -----------------------------------}} */
     };
     static const size_t kNumValidExtensions =

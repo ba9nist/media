@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#define LOG_NDEBUG 0
+//#define LOG_NDEBUG 0
 #define LOG_TAG "ChromiumHTTPDataSource"
 #include <media/stagefright/foundation/ADebug.h>
 
@@ -37,12 +37,8 @@ ChromiumHTTPDataSource::ChromiumHTTPDataSource(uint32_t flags)
       mIOResult(OK),
       mContentSize(-1),
       mDecryptHandle(NULL),
-      mDrmManagerClient(NULL),
-      mReadTimeoutUs(kDefaultReadTimeOutUs),
-      mForceDisconnect(false) {
+      mDrmManagerClient(NULL) {
     mDelegate->setOwner(this);
-    mDelegate->setUA(!!(mFlags & kFlagUAIPAD));
-    mIsRedirected = false;
 }
 
 ChromiumHTTPDataSource::~ChromiumHTTPDataSource() {
@@ -74,106 +70,10 @@ status_t ChromiumHTTPDataSource::connect(
     return connect_l(uri, headers, offset);
 }
 
-//* add by chenxiaochuan for QQ live stream.
-
-AString ChromiumHTTPDataSource::getRedirectUri(bool getAll)
-{
-	if(!getAll) {
-		//for m3u8
-		char* tmp;
-		char* new_url;
-		char* new_url2;
-		char* pos1;
-		char* pos2;
-
-		if(!mIsRedirected)
-			return mURI.c_str();
-
-		tmp = (char*)malloc(4096);
-		if(tmp == NULL)
-			return mURI.c_str();
-
-		new_url  = tmp;
-		new_url2 = tmp + 2048;
-
-		strcpy(new_url, mURI.c_str());
-
-		pos1 = strstr(new_url, "//");
-		if(pos1 == NULL)
-		{
-			free(tmp);
-			return mURI.c_str();
-		}
-
-		pos1 += 2;
-
-		pos2 = strstr(pos1, "/");
-		if(pos2 == NULL)
-		{
-			free(tmp);
-			return mURI.c_str();
-		}
-
-		*pos1 = 0;
-		strcpy(new_url2, new_url);
-		strcat(new_url2, mRedirectHost.c_str());
-		if(strlen(mRedirectPort.c_str()) > 0)
-		{
-			strcat(new_url2, ":");
-			strcat(new_url2, mRedirectPort.c_str());
-		}
-
-		strcat(new_url2, pos2);
-		mRedirectURI = new_url2;
-		free(tmp);
-	} else  if(mRedirectURI.empty()){
-		//for flv,mkv.etc
-		//add by weihongqiang
-		mRedirectURI.append("http://");
-		mRedirectURI.append(mRedirectHost);
-		if(mRedirectPort.size() > 0) {
-			mRedirectURI.append(mRedirectPort);
-		}
-		mRedirectURI.append(mRedirectPath);
-	}
-	LOG_PRI(ANDROID_LOG_INFO, LOG_TAG, "getAll %d, mRedirectURI %s", getAll, mRedirectURI.c_str());
-	return mRedirectURI;
-}
-
-
-bool ChromiumHTTPDataSource::isRedirected()
-{
-	return mIsRedirected;
-}
-
-void ChromiumHTTPDataSource::setRedirectHost(const char* host)
-{
-	mRedirectHost = host;
-	mIsRedirected = true;
-}
-
-void ChromiumHTTPDataSource::setRedirectPort(const char* port)
-{
-	mRedirectPort = port;
-}
-
-void ChromiumHTTPDataSource::setRedirectPath(const char* path)
-{
-	mRedirectPath = path;
-}
-
-void ChromiumHTTPDataSource::setRedirectSpec(const char* path)
-{
-	//especially neccessary for QQ video.
-	mRedirectURI = path;
-}
-//* end.
-
 status_t ChromiumHTTPDataSource::connect_l(
         const char *uri,
         const KeyedVector<String8, String8> *headers,
         off64_t offset) {
-
     if (mState != DISCONNECTED) {
         disconnect_l();
     }
@@ -186,10 +86,6 @@ status_t ChromiumHTTPDataSource::connect_l(
     }
 
     mURI = uri;
-    mIsRedirected = false;
-
-	//LOG_PRI(ANDROID_LOG_VERBOSE, LOG_TAG, "uri = %s.", uri);
-
     mContentType = String8("application/octet-stream");
 
     if (headers != NULL) {
@@ -203,40 +99,17 @@ status_t ChromiumHTTPDataSource::connect_l(
     mCurrentOffset = offset;
 
     mDelegate->initiateConnection(mURI.c_str(), &mHeaders, offset);
-	LOG_PRI(ANDROID_LOG_INFO, LOG_TAG,
-				  "mState0=%d", mState);
 
-
-
-
-	while (mState == CONNECTING || mState == DISCONNECTING) {
-		LOG_PRI(ANDROID_LOG_INFO, LOG_TAG, "while1");
-			mCondition.wait(mLock);
-					LOG_PRI(ANDROID_LOG_INFO, LOG_TAG, "while 2 mForceDisconnect=%d",mForceDisconnect);
-			if(mForceDisconnect) {
-				LOG_PRI(ANDROID_LOG_INFO, LOG_TAG, "disconnected, return");
-				return ERROR_IO;
-			}
-		}
-
-	LOG_PRI(ANDROID_LOG_INFO, LOG_TAG,
-					  "mState1=%d", mState);
+    while (mState == CONNECTING) {
+        mCondition.wait(mLock);
+    }
 
     return mState == CONNECTED ? OK : mIOResult;
 }
 
 void ChromiumHTTPDataSource::onConnectionEstablished(
         int64_t contentSize, const char *contentType) {
-        	LOG_PRI(ANDROID_LOG_INFO, LOG_TAG,
-					  "0onConnectionEstablished");
     Mutex::Autolock autoLock(mLock);
-	LOG_PRI(ANDROID_LOG_INFO, LOG_TAG,
-					  "1onConnectionEstablished");
-   //yuanfang  if (mState != CONNECTING) {
-        // We may have initiated disconnection.
-    //yuanfang     CHECK_EQ(mState, DISCONNECTING);
-   //yuanfang      return;
-   //yuanfang  }
     mState = CONNECTED;
     mContentSize = (contentSize < 0) ? -1 : contentSize + mCurrentOffset;
     mContentType = String8(contentType);
@@ -244,12 +117,8 @@ void ChromiumHTTPDataSource::onConnectionEstablished(
 }
 
 void ChromiumHTTPDataSource::onConnectionFailed(status_t err) {
-		LOG_PRI(ANDROID_LOG_INFO, LOG_TAG,
-					  "0onConnectionFailed");
     Mutex::Autolock autoLock(mLock);
     mState = DISCONNECTED;
-	LOG_PRI(ANDROID_LOG_INFO, LOG_TAG,
-					  "1onConnectionFailed");
     mCondition.broadcast();
 
     // mURI.clear();
@@ -289,7 +158,6 @@ ssize_t ChromiumHTTPDataSource::readAt(off64_t offset, void *data, size_t size) 
     Mutex::Autolock autoLock(mLock);
 
     if (mState != CONNECTED) {
-		LOG_PRI(ANDROID_LOG_INFO, LOG_TAG,"readAt 11");
         return INVALID_OPERATION;
     }
 
@@ -312,7 +180,6 @@ ssize_t ChromiumHTTPDataSource::readAt(off64_t offset, void *data, size_t size) 
         status_t err = connect_l(tmp.c_str(), &tmpHeaders, offset);
 
         if (err != OK) {
-			LOG_PRI(ANDROID_LOG_INFO, LOG_TAG,"readAt 0");
             return err;
         }
     }
@@ -323,32 +190,11 @@ ssize_t ChromiumHTTPDataSource::readAt(off64_t offset, void *data, size_t size) 
 
     mDelegate->initiateRead(data, size);
 
-	int32_t bandwidth_bps;
-	estimateBandwidth(&bandwidth_bps);
-	int64_t readTimeoutUs = 0;
-	if(bandwidth_bps > 0) {
-		readTimeoutUs = (size * 8000000ll)/bandwidth_bps;
-	}
-
-	readTimeoutUs += mReadTimeoutUs;
-	while (mState == READING) {
-		status_t err = mCondition.waitRelative(mLock, readTimeoutUs *1000ll);
-
-      //yuanfang  if(mForceDisconnect) {
-      //yuanfang   	LOG_PRI(ANDROID_LOG_INFO, LOG_TAG, "disconnected, read return");
-      //yuanfang   	return ERROR_IO;
-      //yuanfang   }
-
-		if(err == -ETIMEDOUT) {
-			LOG_PRI(ANDROID_LOG_INFO, LOG_TAG, "Read data timeout,"
-					"maybe server didn't response us, return %d", err);
-
-			return err;
-		}
-	}
+    while (mState == READING) {
+        mCondition.wait(mLock);
+    }
 
     if (mIOResult < OK) {
-			LOG_PRI(ANDROID_LOG_INFO, LOG_TAG,"readAt 1mIOResult=%d",mIOResult);
         return mIOResult;
     }
 
@@ -358,29 +204,20 @@ ssize_t ChromiumHTTPDataSource::readAt(off64_t offset, void *data, size_t size) 
         // The read operation was successful, mIOResult contains
         // the number of bytes read.
         addBandwidthMeasurement(mIOResult, delayUs);
-        //LOG_PRI(ANDROID_LOG_INFO, LOG_TAG, "@@@@ mIOResult:%d delay:%lld",mIOResult, delayUs);
 
         mCurrentOffset += mIOResult;
-			LOG_PRI(ANDROID_LOG_INFO, LOG_TAG,"readAt 0mIOResult=%d",mIOResult);
         return mIOResult;
     }
-	LOG_PRI(ANDROID_LOG_INFO, LOG_TAG,"readAt over");
-    return ERROR_IO;
 
+    return ERROR_IO;
 }
 
 void ChromiumHTTPDataSource::onReadCompleted(ssize_t size) {
-		LOG_PRI(ANDROID_LOG_INFO, LOG_TAG, "0onReadCompleted");
     Mutex::Autolock autoLock(mLock);
 
     mIOResult = size;
-	LOG_PRI(ANDROID_LOG_INFO, LOG_TAG, "1onReadCompleted");
 
     if (mState == READING) {
-     //yuanfang	if(mForceDisconnect) {
-     //yuanfang		LOG_PRI(ANDROID_LOG_INFO, LOG_TAG, "onReadCompleted, but we have disconnected");
- //yuanfang return ;
-   //yuanfang  	}
         mState = CONNECTED;
         mCondition.broadcast();
     }
@@ -413,14 +250,11 @@ void ChromiumHTTPDataSource::initiateRead(void *data, size_t size) {
 }
 
 void ChromiumHTTPDataSource::onDisconnectComplete() {
-	LOG_PRI(ANDROID_LOG_INFO, LOG_TAG, "0onDisconnectComplete");
     Mutex::Autolock autoLock(mLock);
-	LOG_PRI(ANDROID_LOG_INFO, LOG_TAG, "1onDisconnectComplete");
     CHECK_EQ((int)mState, (int)DISCONNECTING);
 
     mState = DISCONNECTED;
     // mURI.clear();
-	LOG_PRI(ANDROID_LOG_INFO, LOG_TAG, "onDisconnectComplete");
 
     mCondition.broadcast();
 }
@@ -482,7 +316,7 @@ void ChromiumHTTPDataSource::clearDRMState_l() {
 }
 
 status_t ChromiumHTTPDataSource::reconnectAtOffset(off64_t offset) {
-/*    Mutex::Autolock autoLock(mLock);
+    Mutex::Autolock autoLock(mLock);
 
     if (mURI.empty()) {
         return INVALID_OPERATION;
@@ -494,44 +328,7 @@ status_t ChromiumHTTPDataSource::reconnectAtOffset(off64_t offset) {
         LOG_PRI(ANDROID_LOG_INFO, LOG_TAG, "Reconnect failed w/ err 0x%08x", err);
     }
 
-    return err;*/
-  
-  Mutex::Autolock autoLock(mLock);
-     status_t err;
-	  if (mURI.empty()) {
-		  return INVALID_OPERATION;
-	  }
-   
-	  LOG_PRI(ANDROID_LOG_INFO, LOG_TAG, "Reconnecting...");
-	  if(mContentSize <= 0) //* check if it is a live stream.
-		   err = connect_l(mURI.c_str(), &mHeaders, 0);
-	  else
-		   err = connect_l(mURI.c_str(), &mHeaders, offset);
-   
-	  if (err != OK) {
-		  LOG_PRI(ANDROID_LOG_INFO, LOG_TAG, "Reconnect failed w/ err 0x%08x", err);
-	  }
-   
-	  return err;
-}
-
-void ChromiumHTTPDataSource::forceDisconnect()
-{
-	LOG_PRI(ANDROID_LOG_INFO, LOG_TAG, "forceDisconnect");
-	if(mState == CONNECTING || mState == READING) {
-		//broadcast the signal, don't change the state.
-        LOG_PRI(ANDROID_LOG_INFO, LOG_TAG, "xxxxxx broadcast a force disconnect signal.");
-		mForceDisconnect = true;
-		mIOResult = ERROR_IO;
-		mCondition.broadcast();
-	}
-}
-
-void ChromiumHTTPDataSource::setTimeoutLastUs(int64_t timeoutUs)
-{
-	if(timeoutUs >= 0) {
-		mReadTimeoutUs = timeoutUs;
-	}
+    return err;
 }
 
 }  // namespace android

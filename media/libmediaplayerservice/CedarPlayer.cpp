@@ -225,6 +225,7 @@ int CedarPlayer::getSubList(MediaPlayer_SubInfo *infoList, int count)
 
 int CedarPlayer::getCurSub()
 {
+	LOGD("CedarPlayer::getCurSub");
 	return mPlayer->getCurSub();
 }
 
@@ -411,11 +412,6 @@ status_t CedarPlayer::setBlackExtend(int value)
 status_t CedarPlayer::extensionControl(int command, int para0, int para1)
 {
 	return mPlayer->extensionControl(command, para0, para1);
-}
-
-status_t CedarPlayer::generalInterface(int cmd, int int1, int int2, int int3, void *p)
-{
-	return mPlayer->generalInterface(cmd, int1, int2, int3, p);
 }
 
 }  // namespace android

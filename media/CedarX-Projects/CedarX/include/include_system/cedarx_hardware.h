@@ -7,7 +7,6 @@ extern "C" {
 
 extern int cedarx_hardware_init(int mode);
 extern int cedarx_hardware_exit(int mode);
-extern void cedarx_register_print(char *func, int line);
 
 #ifdef __cplusplus
 }

@@ -22,145 +22,122 @@
 
 #include <utils/String8.h>
 
-namespace android
-{
+namespace android {
 
-	struct ABuffer;
-	struct DataSource;
-	struct LiveDataSource;
-	struct M3UParser;
-	struct HTTPBase;
+struct ABuffer;
+struct DataSource;
+struct LiveDataSource;
+struct M3UParser;
+struct HTTPBase;
 
-	struct LiveSession : public AHandler
-	{
-		enum Flags
-		{
-			// Don't log any URLs.
-			kFlagIncognito = 1,
-		};
+struct LiveSession : public AHandler {
+    enum Flags {
+        // Don't log any URLs.
+        kFlagIncognito = 1,
+    };
+    LiveSession(uint32_t flags = 0, bool uidValid = false, uid_t uid = 0);
 
-		LiveSession(uint32_t flags = 0, bool uidValid = false, uid_t uid = 0);
+    sp<DataSource> getDataSource();
 
-		sp<DataSource> getDataSource();
+    void connect(
+            const char *url,
+            const KeyedVector<String8, String8> *headers = NULL);
 
-		void connect(const char *url, const KeyedVector<String8, String8> *headers = NULL);
+    void disconnect();
 
-		void disconnect();
+    // Blocks until seek is complete.
+    int64_t seekTo(int64_t timeUs);
 
-		// Blocks until seek is complete.
-		int64_t seekTo(int64_t timeUs);
+    status_t getDuration(int64_t *durationUs);
+    bool isSeekable();
 
-		status_t getDuration(int64_t *durationUs);
-    
-		bool isSeekable();
+protected:
+    virtual ~LiveSession();
 
-	protected:
-		virtual ~LiveSession();
+    virtual void onMessageReceived(const sp<AMessage> &msg);
 
-		virtual void onMessageReceived(const sp<AMessage> &msg);
+private:
+    enum {
+        kMaxNumQueuedFragments = 3,
+        kMaxNumRetries         = 5,
+    };
 
-	private:
-		enum
-		{
-			kMaxNumQueuedFragments = 3,
-			kMaxNumRetries         = 10,
-		};
+    enum {
+        kWhatConnect        = 'conn',
+        kWhatDisconnect     = 'disc',
+        kWhatMonitorQueue   = 'moni',
+        kWhatSeek           = 'seek',
+    };
 
-		enum
-		{
-			kWhatConnect        = 'conn',
-			kWhatDisconnect     = 'disc',
-			kWhatMonitorQueue   = 'moni',
-			kWhatSeek           = 'seek',
-		};
+    struct BandwidthItem {
+        AString mURI;
+        unsigned long mBandwidth;
+    };
 
-		struct BandwidthItem
-		{
-			AString mURI;
-			unsigned long mBandwidth;
-		};
+    uint32_t mFlags;
+    bool mUIDValid;
+    uid_t mUID;
 
-		uint32_t							mFlags;
-		bool								mUIDValid;
-		uid_t								mUID;
+    sp<LiveDataSource> mDataSource;
 
-		sp<LiveDataSource>					mDataSource;
-		sp<HTTPBase>						mHTTPDataSource;
+    sp<HTTPBase> mHTTPDataSource;
 
-		AString								mMasterURL;
-		KeyedVector<String8, String8>		mExtraHeaders;
+    AString mMasterURL;
+    KeyedVector<String8, String8> mExtraHeaders;
 
-		Vector<BandwidthItem>				mBandwidthItems;
+    Vector<BandwidthItem> mBandwidthItems;
 
-		KeyedVector<AString, sp<ABuffer> >	mAESKeyForURI;
+    KeyedVector<AString, sp<ABuffer> > mAESKeyForURI;
 
-		ssize_t								mPrevBandwidthIndex;
-		int64_t								mLastPlaylistFetchTimeUs;
-		sp<M3UParser>						mPlaylist;
-		int32_t								mSeqNumber;
-		int64_t								mSeekTimeUs;
-		int32_t								mNumRetries;
+    ssize_t mPrevBandwidthIndex;
+    int64_t mLastPlaylistFetchTimeUs;
+    sp<M3UParser> mPlaylist;
+    int32_t mSeqNumber;
+    int64_t mSeekTimeUs;
+    int32_t mNumRetries;
 
-		Mutex								mLock;
-		Condition							mCondition;
-		int64_t								mDurationUs;
-		bool								mSeekDone;
+    Mutex mLock;
+    Condition mCondition;
+    int64_t mDurationUs;
+    bool mSeekDone;
     bool mDisconnectPending;
-    bool mTimeout;
-    AString *mCurUri;
 
-		int32_t								mMonitorQueueGeneration;
+    int32_t mMonitorQueueGeneration;
 
-		int64_t								mSeekTargetStartUs;
+    int64_t mSeekTargetStartUs;
 
-		bool								mHasSeekMsg;
-		bool								mLastDownloadTobeContinue;
-		int32_t								mLastDownloadOffset;
-		int32_t								mLastSubSeqNumber;
+    enum RefreshState {
+        INITIAL_MINIMUM_RELOAD_DELAY,
+        FIRST_UNCHANGED_RELOAD_ATTEMPT,
+        SECOND_UNCHANGED_RELOAD_ATTEMPT,
+        THIRD_UNCHANGED_RELOAD_ATTEMPT
+    };
+    RefreshState mRefreshState;
 
-		int32_t								mLastSeqNumberBase;
+    uint8_t mPlaylistHash[16];
 
+    void onConnect(const sp<AMessage> &msg);
+    void onDisconnect();
+    void onDownloadNext();
+    void onMonitorQueue();
+    void onSeek(const sp<AMessage> &msg);
 
-		bool								mIsPlaylistRedirected;
-		char*								mPlaylistRedirectURL;
-		bool                                mDataSourceConnected;
+    status_t fetchFile(const char *url, sp<ABuffer> *out);
+    sp<M3UParser> fetchPlaylist(const char *url, bool *unchanged);
+    size_t getBandwidthIndex();
 
+    status_t decryptBuffer(
+            size_t playlistIndex, const sp<ABuffer> &buffer);
 
-		enum RefreshState
-		{
-			INITIAL_MINIMUM_RELOAD_DELAY,
-			FIRST_UNCHANGED_RELOAD_ATTEMPT,
-			SECOND_UNCHANGED_RELOAD_ATTEMPT,
-			THIRD_UNCHANGED_RELOAD_ATTEMPT
-		};
+    void postMonitorQueue(int64_t delayUs = 0);
 
-		RefreshState						mRefreshState;
-		uint8_t								mPlaylistHash[16];
-		sp<ABuffer>                         mBufferForFetchFile;
+    bool timeToRefreshPlaylist(int64_t nowUs) const;
 
-		void			onConnect(const sp<AMessage> &msg);
-		void			onDisconnect();
-		void			onDownloadNext();
-		void			onMonitorQueue();
-		void			onSeek(const sp<AMessage> &msg);
+    static int SortByBandwidth(const BandwidthItem *, const BandwidthItem *);
 
-		status_t		fetchFile(const char *url, sp<ABuffer> *out);
-		int32_t			fetchTsData(const char* url, bool continueLast);
-		sp<M3UParser>	fetchPlaylist(const char *url, bool *unchanged);
-		size_t			getBandwidthIndex();
-
-		status_t		decryptBuffer(size_t playlistIndex, const sp<ABuffer> &buffer);
-
-		void			postMonitorQueue(int64_t delayUs = 0);
-
-		bool			timeToRefreshPlaylist(int64_t nowUs) const;
-
-		static int		SortByBandwidth(const BandwidthItem *, const BandwidthItem *);
-
-		DISALLOW_EVIL_CONSTRUCTORS(LiveSession);
-	};
+    DISALLOW_EVIL_CONSTRUCTORS(LiveSession);
+};
 
 }  // namespace android
 
 #endif  // LIVE_SESSION_H_
-

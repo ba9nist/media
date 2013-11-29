@@ -798,7 +798,7 @@ status_t CedarXPlayer::set3DMode(int source3dMode, int displayMode)
 
 	if(mVideoRenderer != NULL)
 	{
-		LOGV("set 3d mode, arg[3] = %d, arg[4] = %d", args[3], args[4]);
+		LOGV("xxxxxxxxxxxxx set 3d mode, arg[3] = %d, arg[4] = %d", args[3], args[4]);
 		return mVideoRenderer->control(VIDEORENDER_CMD_SET3DMODE, (int)args);
 	}
 
@@ -1352,12 +1352,7 @@ void CedarXPlayer::StagefrightVideoRenderData(void *frame_info, int frame_id)
 		overlay_para.bProgressiveSrc = frm_inf->is_progressive;
 		overlay_para.bTopFieldFirst = frm_inf->top_field_first;
 		overlay_para.pVideoInfo.frame_rate = frm_inf->frame_rate;
-    #if 0  	
-		overlay_para.flag_addr              = frm_inf->flag_addr;
-		overlay_para.flag_stride            = frm_inf->flag_stride;
-		overlay_para.maf_valid              = frm_inf->maf_valid;
-		overlay_para.pre_frame_valid        = frm_inf->pre_frame_valid;
-    #endif
+
 		if(frm_inf->_3d_mode == CEDARV_3D_MODE_DOUBLE_STREAM && this->display_3d_mode == CEDARX_DISPLAY_3D_MODE_3D)
 		{
 			overlay_para.top_y 		= (unsigned int)frm_inf->y;
@@ -1537,36 +1532,6 @@ int CedarXPlayer::CedarXPlayerCallback(int event, void *info)
 	case CDX_EVENT_SEEK_COMPLETE:
 		finishSeek_l(0);
 		break;
-	case CDA_EVENT_AUDIORAWPLAY:
-    {
-        int64_t token = IPCThreadState::self()->clearCallingIdentity();
-	
-    	static int raw_data_test = 0;
-    	String8 raw1 = String8("raw_data_output=1");
-    	String8 raw0 = String8("raw_data_output=0");
-    	const sp<IAudioFlinger>& af = AudioSystem::get_audio_flinger();
-        if (af == 0) 
-        {
-        	LOGE("[star]............ PERMISSION_DENIED");
-        }
-        else
-        {
-    	
-        	if (para[0])
-        	{
-        		LOGV("[star]............ to set raw data output");
-            	af->setParameters(0, raw1);
-        	}
-        	else
-        	{
-        		LOGV("[star]............ to set not raw data output");
-            	af->setParameters(0, raw0);
-        	}
-        }
-    	
-        IPCThreadState::self()->restoreCallingIdentity(token);
-    }
-        break;
 
 	default:
 		break;

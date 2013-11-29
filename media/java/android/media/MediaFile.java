@@ -187,8 +187,7 @@ public class MediaFile {
         addFileType("OGA", FILE_TYPE_OGG, "application/ogg", MtpConstants.FORMAT_OGG);
         addFileType("AAC", FILE_TYPE_AAC, "audio/aac", MtpConstants.FORMAT_AAC);
         addFileType("AAC", FILE_TYPE_AAC, "audio/aac-adts", MtpConstants.FORMAT_AAC);
-        addFileType("ADTS", FILE_TYPE_AAC, "audio/aac-adts", MtpConstants.FORMAT_AAC);
-		addFileType("MKA", FILE_TYPE_MKA, "audio/x-matroska");
+        addFileType("MKA", FILE_TYPE_MKA, "audio/x-matroska");
         
         addFileType("APE", FILE_TYPE_CEDARA, "audio/cedara");
         //addFileType("FLAC",FILE_TYPE_CEDARA, "audio/cedara");
@@ -197,8 +196,8 @@ public class MediaFile {
         addFileType("OMG", FILE_TYPE_CEDARA, "audio/cedara");
         addFileType("M4R", FILE_TYPE_CEDARA, "audio/cedara");
         addFileType("RA",  FILE_TYPE_CEDARA, "audio/cedara");
-        addFileType("MP1", FILE_TYPE_CEDARA, "audio/cedara");
-        addFileType("MP2", FILE_TYPE_CEDARA, "audio/cedara");
+        //addFileType("MP1", FILE_TYPE_CEDARA, "audio/cedara");
+        //addFileType("MP2", FILE_TYPE_CEDARA, "audio/cedara");
  
         addFileType("MID", FILE_TYPE_MID, "audio/midi");
         addFileType("MIDI", FILE_TYPE_MID, "audio/midi");
@@ -235,7 +234,6 @@ public class MediaFile {
 		addFileType("PMP", FILE_TYPE_CEDARV, "video/cedarx");
 		addFileType("3DM", FILE_TYPE_CEDARV, "video/cedarx");
 		addFileType("3DV", FILE_TYPE_CEDARV, "video/cedarx");
-		addFileType("DIVX",FILE_TYPE_CEDARV, "video/cedarx");
 
         //if (isWMVEnabled()) {
             addFileType("WMV", FILE_TYPE_WMV, "video/x-ms-wmv", MtpConstants.FORMAT_WMV);

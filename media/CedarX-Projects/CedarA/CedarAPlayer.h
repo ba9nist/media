@@ -29,11 +29,6 @@
 
 #include "CedarADecoder.h"
 
-#if (CEDARX_ANDROID_VERSION > 6)
-#define LOGV ALOGV
-#define LOGE ALOGE
-#endif
-
 namespace android {
 
 struct CedarAAudioPlayer;
@@ -56,7 +51,7 @@ struct CedarAPlayer {
             const KeyedVector<String8, String8> *headers = NULL);
 
     status_t setDataSource(int fd, int64_t offset, int64_t length);
-#if (CEDARX_ANDROID_VERSION >= 6)
+#ifndef __ANDROID_VERSION_2_3_4
     status_t setDataSource(const sp<IStreamSource> &source);
 #endif
     void reset();
@@ -72,12 +67,10 @@ struct CedarAPlayer {
     status_t stop();
 
     bool isPlaying() const;
-#if (CEDARX_ANDROID_VERSION < 6)
+#ifdef __ANDROID_VERSION_2_3_4
     void setISurface(const sp<ISurface> &isurface);
 #else
-#if (CEDARX_ANDROID_VERSION < 7)
     status_t setSurface(const sp<Surface> &surface);
-#endif
     status_t setSurfaceTexture(const sp<ISurfaceTexture> &surfaceTexture);
     status_t setParameter(int key, const Parcel &request);
     status_t getParameter(int key, Parcel *reply);
@@ -135,14 +128,13 @@ private:
 
     bool mQueueStarted;
     wp<MediaPlayerBase> mListener;
-#if (CEDARX_ANDROID_VERSION < 6)
+#ifdef __ANDROID_VERSION_2_3_4
     sp<ISurface> mISurface;
 #else
     bool mUIDValid;
     uid_t mUID;
-#if (CEDARX_ANDROID_VERSION < 7)
+
     sp<Surface> mSurface;
-#endif
     sp<ANativeWindow> mNativeWindow;
 #endif
 

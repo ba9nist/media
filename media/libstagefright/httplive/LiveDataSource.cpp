@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#define LOG_NDEBUG 0
-#define LOG_TAG "libstagefrigte/LiveDataSource"
+//#define LOG_NDEBUG 0
+#define LOG_TAG "LiveDataSource"
 #include <utils/Log.h>
 
 #include "LiveDataSource.h"

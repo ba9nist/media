@@ -36,7 +36,7 @@
 #include <sys/mman.h>
 
 #include <type_camera.h>
-
+#include <CDX_PlayerAPI.h>
 
 extern "C" int CedarXRecorderCallbackWrapper(void *cookie, int event, void *info);
 
@@ -183,7 +183,7 @@ status_t CedarXRecorder::init()
 {
     LOGV("init");
 	
-	CDXRecorder_Create((void**)&mCdxRecorder);
+	CDXRecorder_Init(this);
 	
 	LOGV("CedarXRecorder::init OK");
     return OK;
@@ -602,10 +602,10 @@ status_t CedarXRecorder::prepare()
 	}
 	
 	// set recorder mode to CDX_Recorder
-	mCdxRecorder->control((void*)mCdxRecorder, CDX_CMD_SET_REC_MODE, mRecModeFlag, 0);
+	CDXRecorder_Control(CDX_CMD_SET_REC_MODE, mRecModeFlag, 0);
 	
 	// create CedarX component
-	ret = mCdxRecorder->control((void*)mCdxRecorder, CDX_CMD_PREPARE, 0, 0);
+	ret = CDXRecorder_Control(CDX_CMD_PREPARE, 0, 0);
 	if( ret == -1)
 	{
 		printf("CEDARX REPARE ERROR!\n");
@@ -613,10 +613,10 @@ status_t CedarXRecorder::prepare()
 	}
 
 	// register callback
-	mCdxRecorder->control((void*)mCdxRecorder, CDX_CMD_REGISTER_CALLBACK, (unsigned int)&CedarXRecorderCallbackWrapper, (unsigned int)this);
+	CDXRecorder_Control(CDX_CMD_REGISTER_CALLBACK, (unsigned int)&CedarXRecorderCallbackWrapper, (unsigned int)this);
 	
 	// set file handle to CDX_Recorder render component
-	ret = mCdxRecorder->control((void*)mCdxRecorder, CDX_CMD_SET_SAVE_FILE, (unsigned int)mOutputFd, 0);
+	ret = CDXRecorder_Control(CDX_CMD_SET_SAVE_FILE, (unsigned int)mOutputFd, 0);
 	if(ret != OK)
 	{
 		LOGE("CedarXRecorder::prepare, CDX_CMD_SET_SAVE_FILE failed\n");
@@ -679,7 +679,7 @@ status_t CedarXRecorder::prepare()
 		return -1;
 	}
 	
-	ret = mCdxRecorder->control((void*)mCdxRecorder, CDX_CMD_SET_VIDEO_INFO, (unsigned int)&vInfo, 0);
+	ret = CDXRecorder_Control(CDX_CMD_SET_VIDEO_INFO, (unsigned int)&vInfo, 0);
 	if(ret != OK)
 	{
 		LOGE("CedarXRecorder::prepare, CDX_CMD_SET_VIDEO_INFO failed\n");
@@ -702,7 +702,7 @@ status_t CedarXRecorder::prepare()
 			return -1;
 		}
 		
-		ret = mCdxRecorder->control((void*)mCdxRecorder, CDX_CMD_SET_AUDIO_INFO, (unsigned int)&aInfo, 0);
+		ret = CDXRecorder_Control(CDX_CMD_SET_AUDIO_INFO, (unsigned int)&aInfo, 0);
 		if(ret != OK)
 		{
 			LOGE("CedarXRecorder::prepare, CDX_CMD_SET_AUDIO_INFO failed\n");
@@ -733,7 +733,7 @@ status_t CedarXRecorder::start()
 	IPCThreadState::self()->restoreCallingIdentity(token);
 
 	bRecorderRunning = true;
-	mCdxRecorder->control((void*)mCdxRecorder, CDX_CMD_START, 0, 0);
+	CDXRecorder_Control(CDX_CMD_START, 0, 0);
 
 	mLatencyStartUs = systemTime() / 1000;
 	LOGV("mLatencyStartUs: %lldus", mLatencyStartUs);
@@ -749,13 +749,13 @@ status_t CedarXRecorder::pause()
 
 	bRecorderRunning = false;
 
-	if(mCdxRecorder->control((void*)mCdxRecorder, CDX_CMD_GETSTATE, 0, 0) == CDX_STATE_PAUSE)
+	if(CDXRecorder_Control(CDX_CMD_GETSTATE, 0, 0) == CDX_STATE_PAUSE)
 	{
-		mCdxRecorder->control((void*)mCdxRecorder, CDX_CMD_RESUME, 0, 0);
+		CDXRecorder_Control(CDX_CMD_RESUME, 0, 0);
 	}
 	else
 	{
-		mCdxRecorder->control((void*)mCdxRecorder, CDX_CMD_PAUSE, 0, 0);
+		CDXRecorder_Control(CDX_CMD_PAUSE, 0, 0);
 	}
 	
     return OK;
@@ -807,10 +807,10 @@ status_t CedarXRecorder::stop()
 	// usleep(50000);
 
 	LOGV("to stop CDX\n");
-	mCdxRecorder->control((void*)mCdxRecorder, CDX_CMD_STOP, 0, 0);
+	CDXRecorder_Control(CDX_CMD_STOP, 0, 0);
 	LOGV("CDX stopped\n");
 	
-	CDXRecorder_Destroy((void*)mCdxRecorder);
+	CDXRecorder_Exit();
     LOGV("CDX Exit OK\n");
 	
 #if 1
@@ -840,8 +840,6 @@ status_t CedarXRecorder::stop()
 		&& mRecord != NULL)
 	{
 		mRecord->stop();
-		delete mRecord;
-		mRecord = NULL;
 	}
 
 	LOGV("stopped\n");
@@ -946,13 +944,13 @@ void CedarXRecorder::dataCallbackTimestamp(int64_t timestampUs,
 	
 	LOGV("CedarXRecorder::dataCallbackTimestamp: addrPhyY %x, timestamp %lld us", buf.addrPhyY, timestampUs);
 
-	ret = mCdxRecorder->control((void*)mCdxRecorder, CDX_CMD_SEND_BUF, (unsigned int)&buf, 0); 
+	ret = CDXRecorder_Control(CDX_CMD_SEND_BUF, (unsigned int)&buf, 0); 
 	if (ret != 0)
 	{
 		CedarXReleaseFrame(buf.index);
 	}
 
-	mCdxRecorder->control((void*)mCdxRecorder, CDX_CMD_GET_DURATION, (unsigned int)&duration, 0); 
+	CDXRecorder_Control(CDX_CMD_GET_DURATION, (unsigned int)&duration, 0); 
 	LOGV("duration : %d", duration);
 	
 	if (mMaxFileDurationUs != 0 
@@ -961,7 +959,7 @@ void CedarXRecorder::dataCallbackTimestamp(int64_t timestampUs,
 		mListener->notify(MEDIA_RECORDER_EVENT_INFO, MEDIA_RECORDER_INFO_MAX_DURATION_REACHED, 0);
 	}
 
-	mCdxRecorder->control((void*)mCdxRecorder, CDX_CMD_GET_FILE_SIZE, (int64_t)&fileSizeBytes, 0); 
+	CDXRecorder_Control(CDX_CMD_GET_FILE_SIZE, (int64_t)&fileSizeBytes, 0); 
 	LOGV("fileSizeBytes : %lld", fileSizeBytes);
 	
 	if (fileSizeBytes != 0 

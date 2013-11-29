@@ -2,12 +2,6 @@
 #ifndef LIBVE_TYPEDEF_H
 #define LIBVE_TYPEDEF_H
 
-#ifdef MELIS
-#include "ePDK.h"
-#else
-#include <stdarg.h>
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -84,9 +78,7 @@ extern "C" {
         MPEG4_SUB_FORMAT_RMG2,		//* H263 coded video stream muxed in '.rm' file.
         MPEG4_SUB_FORMAT_VP6,
         MPEG4_SUB_FORMAT_WMV1,
-        MPEG4_SUB_FORMAT_WMV2,
-        MPEG4_SUB_FORMAT_DIVX2,		//MSMPEGV2
-        MPEG4_SUB_FORMAT_DIVX1		//MSMPEGV1
+        MPEG4_SUB_FORMAT_WMV2
     }stream_sub_format_e;
     
     typedef enum CONTAINER_FORMAT
@@ -103,8 +95,6 @@ extern "C" {
     	CONTAINER_FORMAT_RM,
     	CONTAINER_FORMAT_TS,
     	CONTAINER_FORMAT_VOB,
-    	CONTAINER_FORMAT_WEBM,
-    	CONTAINER_FORMAT_OGM,
     }container_format_e;
 
     //*******************************************************//
@@ -131,9 +121,7 @@ extern "C" {
 
         PIXEL_FORMAT_AW_YUV420  = 0x10,
         PIXEL_FORMAT_AW_YUV422	= 0x11,
-        PIXEL_FORMAT_AW_YUV411  = 0x12,
-        PIXEL_FORMAT_PLANNER_YUV420        = 0x13,
-        PIXEL_FORMAT_PLANNER_YVU420        = 0x14
+        PIXEL_FORMAT_AW_YUV411  = 0x12
     }pixel_format_e;
     
 
@@ -180,9 +168,6 @@ extern "C" {
 		ANAGLAGH_NONE,
 	}anaglath_trans_mode_e;
 
-#define CEDARV_PICT_PROP_NO_SYNC    0x1
-#define CEDARV_FLAG_DECODE_NO_DELAY 0x40000000
-
 	//*******************************************************//
 	//************ Define Video Frame Structure. ************//
 	//*******************************************************//
@@ -205,7 +190,6 @@ extern "C" {
         
         u32             		frame_rate;             //* frame_rate, multiplied by 1000;
         u32             		aspect_ratio;           //* pixel width to pixel height ratio, multiplied by 1000;
-        u32                     pict_prop;              //* picture property flags
         u8              		is_progressive;         //* progressive or interlace picture;
         u8              		top_field_first;        //* display top field first;
         u8              		repeat_top_field;       //* if interlace picture, whether repeat the top field when display;
@@ -216,6 +200,7 @@ extern "C" {
 
 		_3d_mode_e   			_3d_mode;
 		anaglath_trans_mode_e	anaglath_transform_mode;
+
 		u32             		size_y;
 		u32             		size_u;
 		u32             		size_v;
@@ -235,10 +220,6 @@ extern "C" {
 		u8*             		u2;                      //* pixel data, it is interpreted based on pixel_format;
 		u8*             		v2;                      //* pixel data, it is interpreted based on pixel_format;
 		u8*             		alpha2;                  //* pixel data, it is interpreted based on pixel_format;
-		u32   					flag_addr;//dit maf flag address
-	    u32						flag_stride;//dit maf flag line stride
-	    u8						maf_valid;
-	    u8						pre_frame_valid;
 	}vpicture_t;
 
 	//*******************************************************//
@@ -262,7 +243,6 @@ extern "C" {
 		u8  					valid;      	//* whether this stream frame is valid;
 		u32						id;				//* stream frame identification.
 		cedarv_stream_type_e 	stream_type;	//* major or minor stream in MVC.
-		u32                     pict_prop;
 	}vstream_data_t;
 
 #ifdef __cplusplus

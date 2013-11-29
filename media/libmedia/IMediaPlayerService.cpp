@@ -27,10 +27,6 @@
 
 #include <utils/Errors.h>  // for status_t
 
-#undef LOG_TAG
-#define LOG_TAG "IMediaPlayerService"
-#include <utils/Log.h>
-
 namespace android {
 
 enum {
@@ -63,18 +59,6 @@ enum {
     GET_WHITE_EXTEND,
     SET_BLACK_EXTEND,
     GET_BLACK_EXTEND
-    /* add by Gary. end   -----------------------------------}} */
-    /* add by Gary. start {{----------------------------------- */
-    /* 2012-03-12 */
-    /* add the global interfaces to control the subtitle gate  */
-    ,
-    SET_GLOBAL_SUB_GATE,
-    GET_GLOBAL_SUB_GATE,
-    /* add by Gary. end   -----------------------------------}} */
-    /* add by Gary. start {{----------------------------------- */
-    /* 2012-4-24 */
-    /* add two general interfaces for expansibility */
-    GENERAL_GLOBAL_INTERFACE,
     /* add by Gary. end   -----------------------------------}} */
 };
 
@@ -279,51 +263,6 @@ public:
     }
     
     /* add by Gary. end   -----------------------------------}} */
-
-    /* add by Gary. start {{----------------------------------- */
-    /* 2012-03-12 */
-    /* add the global interfaces to control the subtitle gate  */
-    status_t setGlobalSubGate(bool showSub)
-    {
-        Parcel data, reply;
-        data.writeInterfaceToken(IMediaPlayerService::getInterfaceDescriptor());
-        data.writeInt32(showSub);
-        remote()->transact(SET_GLOBAL_SUB_GATE, data, &reply);
-        return reply.readInt32();
-    }
-
-    bool getGlobalSubGate()
-    {
-        Parcel data, reply;
-        data.writeInterfaceToken(IMediaPlayerService::getInterfaceDescriptor());
-        remote()->transact(GET_GLOBAL_SUB_GATE, data, &reply);
-        return reply.readInt32();
-    }    
-    /* add by Gary. end   -----------------------------------}} */
-
-    /* add by Gary. start {{----------------------------------- */
-    /* 2012-4-24 */
-    /* add two general interfaces for expansibility */
-    status_t generalGlobalInterface(int cmd, int int1, int int2, int int3, void *p)
-    {
-        Parcel data, reply;
-        status_t ret;
-        data.writeInterfaceToken(IMediaPlayerService::getInterfaceDescriptor());
-        
-        data.writeInt32(cmd);                               // the first input value MUST be always the command.
-        switch(cmd){
-            case MEDIAPLAYER_GLOBAL_CMD_TEST:{
-                data.writeInt32(int1);
-                remote()->transact(GENERAL_GLOBAL_INTERFACE, data, &reply);
-                ret = reply.readInt32();
-                *((int *)p) = reply.readInt32();
-            }break;
-            default:
-                return BAD_VALUE;
-        }
-        return ret;
-    }
-    /* add by Gary. end   -----------------------------------}} */
 };
 
 IMPLEMENT_META_INTERFACE(MediaPlayerService, "android.media.IMediaPlayerService");
@@ -478,49 +417,6 @@ status_t BnMediaPlayerService::onTransact(
         case GET_BLACK_EXTEND: {
             CHECK_INTERFACE(IMediaPlayer, data, reply);
             reply->writeInt32(getBlackExtend());
-            return NO_ERROR;
-        } break;
-        /* add by Gary. end   -----------------------------------}} */
-        /* add by Gary. start {{----------------------------------- */
-        /* 2012-03-12 */
-        /* add the global interfaces to control the subtitle gate  */
-        case SET_GLOBAL_SUB_GATE: {
-            CHECK_INTERFACE(IMediaPlayer, data, reply);
-            reply->writeInt32(setGlobalSubGate(data.readInt32()));
-            return NO_ERROR;
-        } break;
-        case GET_GLOBAL_SUB_GATE: {
-            CHECK_INTERFACE(IMediaPlayer, data, reply);
-            reply->writeInt32(getGlobalSubGate());
-            return NO_ERROR;
-        } break;
-        /* add by Gary. end   -----------------------------------}} */
-        /* add by Gary. end   -----------------------------------}} */
-        /* add by Gary. start {{----------------------------------- */
-        /* 2012-4-24 */
-        /* add two general interfaces for expansibility */
-        case GENERAL_GLOBAL_INTERFACE: {      
-            CHECK_INTERFACE(IMediaPlayer, data, reply);
-            int cmd;
-            int int1 = 0;
-            int int2 = 0;
-            int int3 = 0;
-            void *p  = NULL;
-            status_t ret;
-            
-            cmd = data.readInt32();
-            switch(cmd){
-                case MEDIAPLAYER_GLOBAL_CMD_TEST:{
-                    int1 = data.readInt32();
-                    int data = 2;
-                    p = &data;
-                    ret = generalGlobalInterface(cmd, int1, int2, int3, p);
-                    reply->writeInt32(ret);
-                    reply->writeInt32(data);
-                }break;
-                default:
-                    return BAD_VALUE;
-            }
             return NO_ERROR;
         } break;
         /* add by Gary. end   -----------------------------------}} */

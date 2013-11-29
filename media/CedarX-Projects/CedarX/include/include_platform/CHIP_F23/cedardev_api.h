@@ -20,14 +20,9 @@ enum IOCTL_CMD {
 	IOCTL_ENGINE_REL,
 	IOCTL_ENGINE_CHECK_DELAY,
     IOCTL_GET_IC_VER,
+
 	IOCTL_ADJUST_AVS2_ABS,
 	IOCTL_FLUSH_CACHE,
-	IOCTL_SET_REFCOUNT,
-	IOCTL_FLUSH_CACHE_ALL,
-	IOCTL_TEST_VERSION,
-	
-	IOCTL_READ_REG = 0x300,
-	IOCTL_WRITE_REG,
 };
 
 typedef struct CEDARV_ENV_INFOMATION{
@@ -47,9 +42,5 @@ typedef struct cedarv_cache_range_{
 	long end;
 }cedarv_cache_range;
 
-struct cedarv_regop {
-    unsigned int addr;
-    unsigned int value;
-};
 
 #endif

@@ -18,15 +18,9 @@
 
 #define SOFTWARE_RENDERER_H_
 
+#include <media/stagefright/ColorConverter.h>
 #include <utils/RefBase.h>
-#if (CEDARX_ANDROID_VERSION < 7)
 #include <ui/android_native_buffer.h>
-#endif
-#include <hardware/hwcomposer.h>
-#include "virtual_hwcomposer.h"
-
-#define ADAPT_A10_GPU_RENDER (1)
-#define ADAPT_A31_GPU_RENDER (1)
 
 namespace android {
 
@@ -47,7 +41,7 @@ private:
         None,
     };
 
-    //OMX_COLOR_FORMATTYPE mColorFormat;
+    OMX_COLOR_FORMATTYPE mColorFormat;
     YUVMode mYUVMode;
     sp<ANativeWindow> mNativeWindow;
     int32_t mWidth, mHeight;

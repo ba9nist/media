@@ -23,16 +23,14 @@
 //#include <media/stagefright/OMXClient.h>
 #include <media/stagefright/TimeSource.h>
 #include <utils/threads.h>
-//#include <hardware/hwcomposer.h>
-#include "CedarXNativeRenderer.h"
+
 #include <media/stagefright/CedarXAudioPlayer.h>
 #include <media/stagefright/MediaBuffer.h>
 //#include <media/stagefright/MediaClock.h>
+
 #include <media/mediaplayerinfo.h>
 
 #include <CDX_PlayerAPI.h>
-
-#include <include_sft/NuPlayerSource.h>
 
 namespace android {
 
@@ -45,8 +43,6 @@ struct NuCachedSource2;
 struct ISurfaceTexture;
 
 struct ALooper;
-struct AwesomePlayer;
-struct CedarXPlayerAdapter;
 
 struct CedarXRenderer : public RefBase {
     CedarXRenderer() {}
@@ -58,23 +54,6 @@ private:
     CedarXRenderer(const CedarXRenderer &);
     CedarXRenderer &operator=(const CedarXRenderer &);
 };
-
-//for setParameter()
-typedef enum tag_KeyofSetParameter{
-    PARAM_KEY_ENCRYPT_FILE_TYPE_DISABLE          = 0x00,
-    PARAM_KEY_ENCRYPT_ENTIRE_FILE_TYPE           = 0x01,
-    PARAM_KEY_ENCRYPT_PART_FILE_TYPE             = 0x02,
-    PARAM_KEY_ENABLE_BOOTANIMATION               = 100,
-
-    //add by weihongqiang for IPTV.
-    PARAM_KEY_SET_AV_SYNC			             = 0x100,
-    PARAM_KEY_ENABLE_KEEP_FRAME				     = 0x101,
-    PARAM_KEY_CLEAR_BUFFER				     	 = 0x102,
-    //audio channel.
-    PARAM_KEY_SWITCH_CHANNEL		     	 	 = 0x103,
-    //for IPTV end.
-    PARAM_KEY_,
-}KeyofSetParameter;
 
 enum {
     PLAYING             = 0x01,
@@ -97,25 +76,8 @@ enum {
     NATIVE_SUSPENDING   = 0x20000,
 };
 
-enum {
-	SOURCETYPE_URL = 0,
-	SOURCETYPE_FD ,
-	SOURCETYPE_SFT_STREAM
-};
-
 typedef struct CedarXPlayerExtendMember_{
-	int64_t mLastGetPositionTimeUs;
-	int64_t mLastPositionUs;
-	int32_t mOutputSetting;
-	int32_t mUseHardwareLayer;
-	int32_t mPlaybackNotifySend;
-
-    //for thirdpart_fread of encrypt video file
-    int32_t     encrypt_type;         // 0: disable; 1: encrypt entire file; 2: encrypt part file;
-    uint32_t    encrypt_file_format;  //
-
-    //for Bootanimation;
-    uint32_t    bootanimation_enable;
+	int xxxx;
 }CedarXPlayerExtendMember;
 
 struct CedarXPlayer { //don't touch this struct any more, you can extend members in CedarXPlayerExtendMember
@@ -163,11 +125,9 @@ struct CedarXPlayer { //don't touch this struct any more, you can extend members
 
     status_t suspend();
     status_t resume();
-    int setVps(int vpsspeed);    //set play speed,  aux = -40~100,=0-normal; <0-slow; >0-fast, so speed scope: (100-40)% ~ (100+100)%, ret = OK
 #ifndef __CHIP_VERSION_F20
     status_t setScreen(int screen);
     status_t set3DMode(int source3dMode, int displayMode);
-    status_t set3DMode(int rotate_flag);
     int    	 getMeidaPlayerState();
     int      getSubCount();
     int      getSubList(MediaPlayer_SubInfo *infoList, int count);
@@ -209,54 +169,22 @@ struct CedarXPlayer { //don't touch this struct any more, you can extend members
     status_t setChromaSharp(int value);
     status_t setWhiteExtend(int value);
     status_t setBlackExtend(int value);
-    status_t setChannelMuteMode(int muteMode);
-    int getChannelMuteMode();
     status_t extensionControl(int command, int para0, int para1);
-    status_t generalInterface(int cmd, int int1, int int2, int int3, void *p);
 #endif
     // This is a mask of MediaExtractor::Flags.
     uint32_t flags() const;
 
     void postAudioEOS();
     void postAudioSeekComplete();
-#if (CEDARX_ANDROID_VERSION >= 7)
-    //added by weihongqiang.
-    status_t invoke(const Parcel &request, Parcel *reply);
-#endif
 
     int CedarXPlayerCallback(int event, void *info);
-
-
-    int getMaxCacheSize();
-    int getMinCacheSize();
-    int getStartPlayCacheSize();
-    int getCachedDataSize();
-    int getCachedDataDuration();
-    int getStreamBitrate();
-
-    // add by yaosen 2013-1-22
-	int getCacheSize(int *nCacheSize);
-	int getCacheDuration(int *nCacheDuration);
-    bool setCacheSize(int nMinCacheSize,int nStartCacheSize,int nMaxCacheSize);
-    bool setCacheParams(int nMaxCacheSize, int nStartPlaySize, int nMinCacheSize, int nCacheTime, bool bUseDefaultPolicy);
-    void getCacheParams(int* pMaxCacheSize, int* pStartPlaySize, int* pMinCacheSize, int* pCacheTime, bool* pUseDefaultPolicy);
-
 private:
     friend struct CedarXEvent;
 
-    //* for cache policy of network stream playing.
-    int mMaxCacheSize;
-    int mStartPlayCacheSize;
-    int mMinCacheSize;
-    int mCacheTime;
-    int mUseDefautlCachePolicy;
-
     mutable Mutex mLock;
-    mutable Mutex mLockNativeWindow;
     Mutex mMiscStateLock;
 
     CDXPlayer *mPlayer;
-    AwesomePlayer *mAwesomePlayer;
     int mStreamType;
 
     bool mQueueStarted;
@@ -269,13 +197,11 @@ private:
     sp<MediaPlayerBase::AudioSink> mAudioSink;
 
     String8 mUri;
-    int mSourceType;
+    bool mIsUri;
     KeyedVector<String8, String8> mUriHeaders;
 
     sp<CedarXRenderer> mVideoRenderer;
     bool mVideoRendererIsPreview;
-
-    sp<Source> mSftSource;
 
     CedarXMediaInformations mMediaInfo;
     CedarXAudioPlayer *mAudioPlayer;
@@ -286,29 +212,25 @@ private:
     bool isCedarXInitialized;
     int32_t mDisableXXXX;
 
-    uint32_t	_3d_mode;           //cedarv_3d_mode_e
+    uint32_t	_3d_mode;
     uint32_t	pre_3d_mode;		//* for source 3d mode changing when displaying at anaglagh mode.
-    uint32_t	display_3d_mode;    //cedarx_display_3d_mode_e
+    uint32_t	display_3d_mode;
     uint32_t	display_type_tmp_save;
     uint32_t    anaglagh_type;
     uint32_t	anaglagh_en;
     uint32_t	wait_anaglagh_display_change;
 
-    int32_t mVideoWidth, mVideoHeight, mFirstFrame; //mVideoWidth:the video width told to app
+    int32_t mVideoWidth, mVideoHeight, mFirstFrame;
     int32_t mCanSeek;
-    int32_t mDisplayWidth, mDisplayHeight, mDisplayFormat;  //mDisplayWidth=vdeclib_display_width, mDisplayHeight=vdeclib_display_height,so when vdeclib rotate, we should careful! mDisplayFormat:HWC_FORMAT_MBYUV422 or HAL_PIXEL_FORMAT_YV12
-    int32_t mRenderToDE;
+    int32_t mDisplayWidth, mDisplayHeight, mDisplayFormat;
     int32_t mLocalRenderFrameIDCurr;
     int64_t mTimeSourceDeltaUs;
     int64_t mVideoTimeUs;
 
-
-//    video3Dinfo_t mVideo3dInfo;//mickey
-    VirtualVideo3DInfo mVideo3dInfo;
-    int  mTagPlay; //0: none 1:first TagePlay 2: Seeding TagPlay
+    bool mTagPlay;
     bool mSeeking;
     bool mSeekNotificationSent;
-    int64_t mSeekTimeUs;    //unit:us
+    int64_t mSeekTimeUs;
     int64_t mLastValidPosition;
 
     int64_t mBitrate;  // total bitrate of the file (in bps) or -1 if unknown.
@@ -350,8 +272,6 @@ private:
     int32_t mAudioTrackIndex;
     int32_t mMaxOutputWidth;
     int32_t mMaxOutputHeight;
-
-    int32_t mVideoScalingMode;
 
     struct SubtitleParameter {
 		int32_t mSubtitleFontSize;
@@ -419,47 +339,10 @@ private:
     int StagefrightAudioRenderGetSpace(void);
     int StagefrightAudioRenderGetDelay(void);
     int StagefrightAudioRenderFlushCache(void);
-    int StagefrightAudioRenderPause(void);
-#if (CEDARX_ANDROID_VERSION >= 7)
-    //add by weihongqiang
-    status_t selectTrack(size_t trackIndex, bool select);
-    status_t getTrackInfo(Parcel *reply) const;
-    size_t countTracks() const;
-    uint8_t mCurrentSubTrack;
-#endif
-    status_t setDataSource_pre();
-    status_t setDataSource_post();
-    status_t setVideoScalingMode(int32_t mode);
-    status_t setVideoScalingMode_l(int32_t mode);
 
     CedarXPlayer(const CedarXPlayer &);
     CedarXPlayer &operator=(const CedarXPlayer &);
-
-    int mVpsspeed;    //set play speed,  aux = -40~100,=0-normal; <0-slow; >0-fast, so speed scope: (100-40)% ~ (100+100)%, ret = OK
-    int mDynamicRotation;   //dynamic rotate, clock wise. 0: no rotate, 1: 90 degree (clock wise), 2: 180, 3: 270, 4: horizon flip, 5: vertical flig; reverse to mediaplayerinfo.h, VideoRotateAngle_0.
-    int mInitRotation;    //record init rotate. clock wise.
-//    friend struct CedarXPlayerAdapter;
-//    CedarXPlayerAdapter *pCedarXPlayerAdapter;
 };
-
-//typedef enum tag_CedarXPlayerAdapterCmd
-//{
-//    CEDARXPLAYERADAPTER_CMD_SETSCREEN_SPECIALPROCESS = 0,    //till androidv4.0 v1.4 version. we need special process when setScreen, for lcd and hdmi switch quickly. Don't need it from v1.5version
-//    
-//    CEDARXPLAYERADAPTER_CMD_,
-//}CedarXPlayerAdapterCmd;
-
-
-//struct CedarXPlayerAdapter  //base adapter
-//{
-//public:
-//    CedarXPlayerAdapter(CedarXPlayer *player);
-//    virtual ~CedarXPlayerAdapter();
-//    int CedarXPlayerAdapterIoCtrl(int cmd, int aux, void *pbuffer);  //cmd = CedarXPlayerAdapterCmd
-//    
-//protected:
-//    CedarXPlayer* const pCedarXPlayer; //CedarXPlayer pointer
-//};
 
 }  // namespace android
 

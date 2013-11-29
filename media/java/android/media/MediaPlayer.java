@@ -1529,7 +1529,6 @@ public class MediaPlayer
     private static final int MEDIA_TIMED_TEXT = 99;
     private static final int MEDIA_ERROR = 100;
     private static final int MEDIA_INFO = 200;
-	private static final int MEDIA_SOURCE_DETECTED = 234;	//Add by Bevis.
 
     private class EventHandler extends Handler
     {
@@ -1577,17 +1576,11 @@ public class MediaPlayer
                 // For PV specific error values (msg.arg2) look in
                 // opencore/pvmi/pvmf/include/pvmf_return_codes.h
                 Log.e(TAG, "Error (" + msg.arg1 + "," + msg.arg2 + ")");
-
-				/*added by john.fu 2012.11.22 for avoiding pause when playing baidu music*/
-				//if (msg.arg1 == 1 && msg.arg2 == -2147483648) {
-				//	return;
-				//}
-				
                 boolean error_was_handled = false;
                 if (mOnErrorListener != null) {
                     error_was_handled = mOnErrorListener.onError(mMediaPlayer, msg.arg1, msg.arg2);
-                } 
-				if (mOnCompletionListener != null && ! error_was_handled) {
+                }
+                if (mOnCompletionListener != null && ! error_was_handled) {
                     mOnCompletionListener.onCompletion(mMediaPlayer);
                 }
                 stayAwake(false);
@@ -1618,13 +1611,6 @@ public class MediaPlayer
             case MEDIA_NOP: // interface test message - ignore
                 break;
 
-			case MEDIA_SOURCE_DETECTED:
-                if (mDlnaSourceDetector != null){
-					String url = new String((byte[])msg.obj);
-					Log.d(TAG, "Dlna source detected! url = " + url);
-                    mDlnaSourceDetector.onSourceDetected(url);
-				}
-                return;
             default:
                 Log.e(TAG, "Unknown message type " + msg.what);
                 return;
@@ -2023,31 +2009,21 @@ public class MediaPlayer
     public native int switchSub(int index);
     
     /**
-     *@deprecated Use {@link #setGlobalSubGate(boolean)} instead     
      * show or hide a subitle.
      * <p>
      * 
      * @param showSub  whether to show subtitle or not
      * @return ==0 means successful, !=0 means failed.
      */
-    @Deprecated
-    public int setSubGate(boolean showSub){
-        Log.d(TAG,"Deprecated setSubGate()");
-        return setGlobalSubGate(showSub);
-    }
+    public native int setSubGate(boolean showSub); 
     
     /**
-     *@deprecated Use {@link #getGlobalSubGate()} instead   
      * check whether subtitles is allowed showing.
      * <p>
      * 
      * @return true if subtitles is allowed showing, false otherwise.
      */
-    @Deprecated
-    public boolean getSubGate(){
-        Log.d(TAG,"Deprecated getSubGate()");
-        return getGlobalSubGate();
-    }
+    public native boolean getSubGate();
     
     /**
      * Set the subtitle¡¯s color.
@@ -2521,93 +2497,4 @@ public class MediaPlayer
     public static native int getBlackExtend();
         
     /* add by Gary. end   -----------------------------------}} */
-
-    /* add by Gary. start {{----------------------------------- */
-    /* 2012-03-07 */
-    /* set audio channel mute */
-
-	public static final int AUDIO_CHANNEL_MUTE_NONE  = 0;
-	public static final int AUDIO_CHANNEL_MUTE_LEFT  = 1;
-	public static final int AUDIO_CHANNEL_MUTE_RIGHT = 2;
-	public static final int AUDIO_CHANNEL_MUTE_ALL   = 3;
-
-    /**
-     * set the audio channel mute mode
-     * <p>
-     * 
-     * @param muteMode  mute mode
-     * @return ==0 means successful, !=0 means failed.
-     */
-    public native int setChannelMuteMode(int muteMode); 
-
-    /**
-     * get the audio channel mute mode
-     * <p>
-     * 
-     * @return the audio channel mute mode.
-     */
-    public native int getChannelMuteMode(); 
-
-    /* add by Gary. end   -----------------------------------}} */
-
-    /* add by Gary. start {{----------------------------------- */
-    /* 2012-03-12 */
-    /* add the global interfaces to control the subtitle gate  */
-
-    /**
-     * show or hide a subitle.
-     * <p>
-     * 
-     * @param showSub  whether to show subtitle or not
-     * @return ==0 means successful, !=0 means failed.
-     */
-    public static native int setGlobalSubGate(boolean showSub); 
-    
-    /**
-     * check whether subtitles is allowed showing.
-     * <p>
-     * 
-     * @return true if subtitles is allowed showing, false otherwise.
-     */
-    public static native boolean getGlobalSubGate();
-    
-    /* add by Gary. end   -----------------------------------}} */
-
-    /* add by Gary. start {{----------------------------------- */
-    /* 2012-4-24 */
-    /* add two general interfaces for expansibility */
-    
-    /**
-     * show or hide a subitle.
-     * <p>
-     * 
-     * @param enable  whether to start the BD folder play mode.
-     * @return ==0 means successful, !=0 means failed.
-     */
-    public native int setBdFolderPlayMode(boolean enable); 
-    
-    /**
-     * check whether is in BD folder play mode.
-     * <p>
-     * 
-     * @return true if is in BD folder play mode, false otherwise.
-     */
-    public native boolean getBdFolderPlayMode();
-    /* add by Gary. end   -----------------------------------}} */
-	public interface DlnaSourceDetector{
-		void onSourceDetected(String url);
-	}
-	private DlnaSourceDetector mDlnaSourceDetector;
-	private static final String DLNA_SOURCE_DETECTOR = "com.softwinner.dlnasourcedetector";
-	public void setDlnaSourceDetector(DlnaSourceDetector detector){
-		mDlnaSourceDetector = detector;
-		try{
-			setDataSource(DLNA_SOURCE_DETECTOR);
-		}
-		catch(Exception e){
-			Log.e(TAG, "Fail to set DlnaSourceDetector..");
-			e.printStackTrace();
-		}
-	}
 }
-

@@ -22,70 +22,36 @@ extern "C" {
 #ifndef _CDX_RECORDER_H_
 #define _CDX_RECORDER_H_
 
-enum cdx_video_source {
-    CDX_VIDEO_SOURCE_DEFAULT,
-    CDX_VIDEO_SOURCE_CAMERA,
-    CDX_VIDEO_SOURCE_GRALLOC_BUFFER,
-    CDX_VIDEO_SOURCE_PUSH_BUFFER,
-};
+#include <stdio.h>
+#include <tsemaphore.h>
+#include <CDX_Types.h>
+#include <CDX_Component.h>
+#include <CDX_Common.h>
+#include <CDX_PlayerAPI.h>
+#include <CDX_Resource_Manager.h>
 
-typedef struct CDXRecorderBsInfo
-{
-	int  bs_count;
-	int  total_size;
-	char *bs_data[4];
-	int  bs_size[4];
-}CDXRecorderBsInfo;
+typedef struct CedarXRecorderContext{
+	CDX_S32 init_flags;
+	CDX_S32 flags;
+	CEDARX_STATES states;
 
-typedef struct CdxRecorderWriterCallbackInfo {
-	void *parent;
-	int (*writer)(void *parent, CDXRecorderBsInfo *bs_info);
-}CdxRecorderWriterCallbackInfo;
+//	void * cookie;
+	CedarXRecorderCallbackType callback_info;
 
-typedef struct CdxRecorderMOtionDetectCB{
-	void *parent;
-	int (*motionDetect)(void *parent, int status);
-}CdxRecorderMOtionDetectCB;
+	OMX_PTR pAppData;
+	RECORDER_MODE mode;
+	CEDARV_REQUEST_CONTEXT cedarv_req_ctx;
 
-#ifndef __OS_LINUX
-int CDXRecorder_Create(void **inst);
-void CDXRecorder_Destroy(void *recorder);
+	cdx_sem_t cdx_sem_recorder_source_cmd;
+	cdx_sem_t cdx_sem_video_encoder_cmd;
+	cdx_sem_t cdx_sem_audio_encoder_cmd;
+	cdx_sem_t cdx_sem_recorder_render_cmd;
 
-typedef struct motion_param  //don't touch it it it alse define in H264encLibApi.h
-{
-	int motion_detect_enable;
-	int motion_detect_ratio;   //for 0 to 12,the 0 is the best sensitive
-}motion_param;
-
-typedef enum RawPacketType
-{
-	RawPacketTypeVideo = 0,
-	RawPacketTypeAudio,
-
-	RawPacketTypeVideoExtra = 128,
-	RawPacketTypeAudioExtra
-}RawPacketType;
-
-typedef struct RawPacketHeader
-{
-	int  stream_type;
-	int  size;
-	long long pts;
-}__attribute__((packed)) RawPacketHeader;
-
-typedef struct CDXRecorder
-{
-	void *context;
-	int  (*control)(void *Recorder, int cmd, unsigned int para0, unsigned int para1);
-}CDXRecorder;
-
-#else
-int CDXRecorder_Init();
-int CDXRecorder_Exit();
-int CDXRecorder_Control(int cmd, unsigned int para0, unsigned int para1);
-
-#endif
-
+	OMX_HANDLETYPE hnd_recorder_source;
+	OMX_HANDLETYPE hnd_video_encoder;
+	OMX_HANDLETYPE hnd_audio_encoder;
+	OMX_HANDLETYPE hnd_recorder_render;
+}CedarXRecorderContext;
 
 #endif	// _CDX_RECORDER_H_
 

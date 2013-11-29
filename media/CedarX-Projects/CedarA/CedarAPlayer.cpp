@@ -27,29 +27,20 @@
 #include <media/stagefright/MediaBuffer.h>
 #include <media/stagefright/MediaDefs.h>
 #include <media/stagefright/MediaExtractor.h>
-
+#include <media/stagefright/MediaDebug.h>
 #include <media/stagefright/MediaSource.h>
 #include <media/stagefright/MetaData.h>
-
-#if (CEDARX_ANDROID_VERSION < 7)
-	#include <media/stagefright/MediaDebug.h>
-	#if (CEDARX_ANDROID_VERSION < 6)
-	#include <media/stagefright/VideoRenderer.h>
-	#include <surfaceflinger/ISurface.h>
-	#else
-	#include <surfaceflinger/Surface.h>
-	#include <gui/ISurfaceTexture.h>
-	#include <gui/SurfaceTextureClient.h>
-	#include <surfaceflinger/ISurfaceComposer.h>
-	#endif
+#ifdef __ANDROID_VERSION_2_3_4
+#include <media/stagefright/VideoRenderer.h>
+#include <surfaceflinger/ISurface.h>
 #else
+#include <surfaceflinger/Surface.h>
 #include <gui/ISurfaceTexture.h>
 #include <gui/SurfaceTextureClient.h>
-#include <media/stagefright/foundation/ADebug.h>
+#include <surfaceflinger/ISurfaceComposer.h>
 #endif
-
 #include <media/stagefright/foundation/ALooper.h>
-//#include <OMX_IVCommon.h>
+#include <OMX_IVCommon.h>
 
 #include "CedarAPlayer.h"
 
@@ -87,7 +78,7 @@ CedarAPlayer::~CedarAPlayer() {
 	LOGV("Deconstruction %x",mFlags);
 }
 
-#if (CEDARX_ANDROID_VERSION >= 6)
+#ifndef __ANDROID_VERSION_2_3_4
 void CedarAPlayer::setUID(uid_t uid) {
     LOGV("CedarXPlayer running on behalf of uid %d", uid);
 
@@ -105,7 +96,9 @@ status_t CedarAPlayer::setDataSource(const char *uri, const KeyedVector<
 		String8, String8> *headers) {
 	//Mutex::Autolock autoLock(mLock);
 	LOGV("CedarAPlayer::setDataSource (%s)", uri);
-	return mPlayer->control(mPlayer, CDA_SET_DATASOURCE_URL, (unsigned int)uri, 0);
+	mPlayer->control(mPlayer, CDA_SET_DATASOURCE_URL, (unsigned int)uri, 0);
+
+	return OK;
 }
 
 status_t CedarAPlayer::setDataSource(int fd, int64_t offset, int64_t length) {
@@ -115,10 +108,11 @@ status_t CedarAPlayer::setDataSource(int fd, int64_t offset, int64_t length) {
 	ext_fd_desc.fd = fd;
 	ext_fd_desc.offset = offset;
 	ext_fd_desc.length = length;
-	return mPlayer->control(mPlayer, CDA_SET_DATASOURCE_FD, (unsigned int)&ext_fd_desc, 0);
+	mPlayer->control(mPlayer, CDA_SET_DATASOURCE_FD, (unsigned int)&ext_fd_desc, 0);
+	return OK;
 }
 
-#if (CEDARX_ANDROID_VERSION >= 6)
+#ifndef __ANDROID_VERSION_2_3_4
 status_t CedarAPlayer::setDataSource(const sp<IStreamSource> &source) {
     return INVALID_OPERATION;
 }
@@ -194,14 +188,12 @@ status_t CedarAPlayer::play_l(int command) {
 		mAudioPlayer->resume();
 	}
 
-	//if (!(mFlags & PAUSING)) {
-	if(1){
+	if (!(mFlags & PAUSING)) {
 		LOGV("CedarAPlayer::play_l start cedara...");
 		mPlayer->control(mPlayer, CDA_CMD_PLAY, (unsigned int)&mSuspensionPositionUs, 0);
 	}
 
 	mFlags &= ~PAUSING;
-	mFlags &= ~AT_EOS;
 
 	return OK;
 }
@@ -252,7 +244,6 @@ status_t CedarAPlayer::pause_l(bool at_eos) {
 			mAudioPlayer->pause();
 		}
 	}
-    mPlayer->control(mPlayer, CDA_CMD_PAUSE, 0, 0);
 
 	mFlags &= ~PLAYING;
 	mFlags |= PAUSING;
@@ -264,21 +255,18 @@ bool CedarAPlayer::isPlaying() const {
 	return (mFlags & PLAYING) || (mFlags & CACHE_UNDERRUN);
 }
 
-#if (CEDARX_ANDROID_VERSION < 6)
+#ifdef __ANDROID_VERSION_2_3_4
 void CedarAPlayer::setISurface(const sp<ISurface> &isurface) {
 	//Mutex::Autolock autoLock(mLock);
 	mISurface = isurface;
 }
 #else
-
-#if (CEDARX_ANDROID_VERSION < 7)
 status_t CedarAPlayer::setSurface(const sp<Surface> &surface) {
     //Mutex::Autolock autoLock(mLock);
 
     //mSurface = surface;
     return OK;
 }
-#endif
 
 status_t CedarAPlayer::setSurfaceTexture(const sp<ISurfaceTexture> &surfaceTexture) {
     //Mutex::Autolock autoLock(mLock);
@@ -318,7 +306,7 @@ status_t CedarAPlayer::getPosition(int64_t *positionUs) {
 		*positionUs = mDurationUs;
 		return OK;
 	}
-	
+
 	mPlayer->control(mPlayer, CDA_CMD_GET_POSITION, (unsigned int)positionUs, 0);
 
 	if(*positionUs == -1){
@@ -334,7 +322,7 @@ status_t CedarAPlayer::seekTo(int64_t timeUs) {
 	mSeekNotificationSent = false;
 	LOGV("seek cmd0 to %lldms", timeUs);
 
-	if (mSeeking) {
+	if (!(mFlags & PLAYING) || mSeeking || (mFlags & AT_EOS)) {
 		LOGV( "seeking while paused or is seeking, sending SEEK_COMPLETE notification"
 					" immediately.");
 
@@ -565,36 +553,6 @@ int CedarAPlayer::CedarAPlayerCallback(int event, void *info)
 	case CDA_EVENT_AUDIORENDERGETDELAY:
 		ret = StagefrightAudioRenderGetDelay();
 		break;
-    case CDA_EVENT_AUDIORAWSPDIFPLAY:
-    {
-        int64_t token = IPCThreadState::self()->clearCallingIdentity();
-	
-    	static int raw_data_test = 0;
-    	String8 raw1 = String8("raw_data_output=1");
-    	String8 raw0 = String8("raw_data_output=0");
-    	const sp<IAudioFlinger>& af = AudioSystem::get_audio_flinger();
-        if (af == 0) 
-        {
-        	LOGE("[star]............ PERMISSION_DENIED");
-        }
-        else
-        {
-    	
-        	if (para[0])
-        	{
-        		LOGV("[star]............ to set raw data output");
-            	af->setParameters(0, raw1);
-        	}
-        	else
-        	{
-        		LOGV("[star]............ to set not raw data output");
-            	af->setParameters(0, raw0);
-        	}
-        }
-    	
-        IPCThreadState::self()->restoreCallingIdentity(token);
-    }
-        break;
 
 //	case CDA_EVENT_PREPARED:
 //		finishAsyncPrepare_l((int)para);

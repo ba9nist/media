@@ -19,31 +19,16 @@
 #ifndef CDX_Common_H_
 #define CDX_Common_H_
 
-#include <pthread.h>
 #include <CDX_Types.h>
 #include <CDX_PlayerAPI.h>
 #include <CDX_Subtitle.h>
 #include <CDX_Fileformat.h>
 
-//add by weihongqiang for distinguishing
-//stream source type.
-typedef enum CEDARX_STREAM_SOURCE_TYPE {
-	CDX_STREAM_SOURCE_UNKOWN = -1,
-	CDX_STREAM_SOURCE_WD_AWTS = 0,
-	CDX_STREAM_SOURCE_WD_TS = 1,
-	//normal ts stream, need sync.
-	CDX_STREAM_SOURCE_NORMAL_TS = 2,
-}CEDARX_STREAM_SOURCE_TYPE;
-
 typedef enum CEDARX_SOURCETYPE{
 	CEDARX_SOURCE_FD,
 	CEDARX_SOURCE_FILEPATH,
-	CEDARX_SOURCE_M3U8,
+	CEDARX_SOURCE_M3UBUFFER,
 	CEDARX_SOURCE_DRAMBUFFER,
-	CEDARX_SOURCE_SFT_STREAM, //for ics
-	CEDARX_SOURCE_NORMAL_STREAM,
-	CEDARX_SOURCE_WRITER_CALLBACK, //for recoder writer
-	CEDARX_SOURCE_NETWORK_RTSP,
 }CEDARX_SOURCETYPE;
 
 typedef enum MEDIA_3DMODE_TYPE{
@@ -53,43 +38,23 @@ typedef enum MEDIA_3DMODE_TYPE{
 }MEDIA_3DMODE_TYPE;
 
 typedef struct CedarXDataSourceDesc{
-	CEDARX_THIRDPART_STREAMTYPE thirdpart_stream_type;
 	CEDARX_STREAMTYPE stream_type;
 	CEDARX_SOURCETYPE source_type;
 	CEDARX_MEDIA_TYPE media_type;
 	MEDIA_3DMODE_TYPE media_subtype_3d;
-	CEDARX_STREAM_SOURCE_TYPE stream_source_type;
-//	void *stream_info; //used for m3u/ts
-	void *m3u_handle;
+
+	void *stream_info; //used for m3u/ts
+
 	char *buffer_data;
 	int  buffer_data_length;
 	reqdata_from_dram req_cb;
 
 	char *source_url; //SetDataSource url
 	CedarXExternFdDesc ext_fd_desc;
-	int thirdpart_encrypted_type;
-	void *url_headers;
-	void *sft_stream_handle;
-	pthread_mutex_t sft_handle_mutex;
-	void *sft_cached_source2;
-	void *sft_http_source;
-	void *sft_rtsp_source;
-	//For local drm protected source.
-	void *sft_file_source;
-	long long sft_stream_length;
-	int	 sft_stream_handle_num;
 
 	int  demux_type;
 
 	int  mp_stream_cache_size; //unit KByte used for mplayer cache size setting
-	char* bd_source_url;
-    int   playBDFile;
-    int   disable_seek;
-
-	pthread_mutex_t m3u_handle_mutex;
-	
-	//for haimeidi m3u9
-	char *buffer_list;
 }CedarXDataSourceDesc;
 
 typedef enum CDX_AUDIO_CODEC_TYPE {

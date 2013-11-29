@@ -16,7 +16,7 @@
 
 //#define LOG_NDEBUG 0
 #define LOG_TAG "CedarXAudioPlayer"
-#include <CDX_Debug.h>
+#include <utils/Log.h>
 
 #include <binder/IPCThreadState.h>
 #include <media/AudioTrack.h>
@@ -39,7 +39,6 @@ CedarXAudioPlayer::CedarXAudioPlayer(
       mSampleRate(0),
       mLatencyUs(0),
       mFrameSize(0),
-      mNumFramesPlayed(0),
       mSeeking(false),
       mReachedEOS(false),
       mFinalStatus(OK),
@@ -76,24 +75,10 @@ status_t CedarXAudioPlayer::start(bool sourceAlreadyStarted)
 
     if (mAudioSink.get() != NULL) {
     	LOGV("AudioPlayer::start 0.1 ]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]");
-#if (CEDARX_ANDROID_VERSION < 7)
         status_t err = mAudioSink->open(
-#if (CEDARX_ANDROID_VERSION == 4)
-                mSampleRate, numChannels, AudioSystem::PCM_16_BIT,
-#else
                 mSampleRate, numChannels, AUDIO_FORMAT_PCM_16_BIT,
-#endif
                 DEFAULT_AUDIOSINK_BUFFERCOUNT,
                 &CedarXAudioPlayer::AudioSinkCallback, this);
-#else
-        int channelMask = CHANNEL_MASK_USE_CHANNEL_ORDER;
-        status_t err = mAudioSink->open(
-                mSampleRate, numChannels, channelMask, AUDIO_FORMAT_PCM_16_BIT,
-                DEFAULT_AUDIOSINK_BUFFERCOUNT,
-                &CedarXAudioPlayer::AudioSinkCallback,
-                this, AUDIO_OUTPUT_FLAG_NONE);
-#endif
-
         if (err != OK) {
 
             return err;
@@ -127,7 +112,6 @@ status_t CedarXAudioPlayer::start(bool sourceAlreadyStarted)
     }
 
     mStarted = true;
-    mNumFramesPlayed = 0;
     LOGV("AudioPlayer::start 0.8 ]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]");
 
     return OK;
@@ -135,10 +119,7 @@ status_t CedarXAudioPlayer::start(bool sourceAlreadyStarted)
 
 void CedarXAudioPlayer::pause(bool playPendingSamples)
 {
-        if(!mStarted) {
-                return ;
-        }
-    //CHECK(mStarted);
+    CHECK(mStarted);
 
     if (playPendingSamples) {
         if (mAudioSink.get() != NULL) {
@@ -157,10 +138,7 @@ void CedarXAudioPlayer::pause(bool playPendingSamples)
 
 void CedarXAudioPlayer::resume()
 {
-        if(!mStarted) {
-                return ;
-        }
-   // CHECK(mStarted);
+    CHECK(mStarted);
 
     if (mAudioSink.get() != NULL) {
         mAudioSink->start();
@@ -171,10 +149,7 @@ void CedarXAudioPlayer::resume()
 
 void CedarXAudioPlayer::reset()
 {
-        if(!mStarted) {
-                return ;
-        }
-    //CHECK(mStarted);
+    CHECK(mStarted);
 
     mReachedEOS = true;
 
@@ -236,7 +211,6 @@ void CedarXAudioPlayer::AudioCallback(int event, void *info)
     }
 
     AudioTrack::Buffer *buffer = (AudioTrack::Buffer *)info;
-    LOGV("==== AudioSinkCallback, buffersize = %d", buffer->size);
     size_t numBytesWritten = fillBuffer(buffer->raw, buffer->size);
 
     buffer->size = numBytesWritten;
@@ -261,7 +235,7 @@ size_t CedarXAudioPlayer::fillBuffer(void *data, size_t size)
     	if (mReachedEOS)
     	     return 0;
 
-        usleep(5*1000);
+        usleep(20*1000);
     }
     LOGV("----tobe fillBuffer size:%d",mAudioBufferSize);
     return size;
@@ -269,22 +243,7 @@ size_t CedarXAudioPlayer::fillBuffer(void *data, size_t size)
 
 int CedarXAudioPlayer::getLatency()
 {
-#if 1
-	unsigned int cache;
-	int cache_time;
-
-	mAudioSink->getPosition(&cache);
-	if(mFrameSize != 0)
-		cache_time = (mNumFramesPlayed/mFrameSize - cache)*1000000/mSampleRate;
-	else
-		cache_time = 0;
-	LOGV("mLatencyUs = %d", cache_time);
-	if(cache_time < 0)
-		cache_time = 0;
-	return cache_time;
-#else
-	return (int)mLatencyUs;
-#endif
+    return (int)mLatencyUs;
 }
 
 int CedarXAudioPlayer::getSpace()
@@ -302,30 +261,21 @@ int CedarXAudioPlayer::render(void* data, int len)
 	memcpy(mAudioBufferPtr, data, tobe_fill_size);
 	mAudioBufferSize -= tobe_fill_size;
 	mAudioBufferPtr += tobe_fill_size;
-//	LOGV("++++fillBuffer size:%d",tobe_fill_size);
-	mNumFramesPlayed += tobe_fill_size;
+	LOGV("++++fillBuffer size:%d",tobe_fill_size);
 	return tobe_fill_size;
 }
 
 status_t CedarXAudioPlayer::seekTo(int64_t time_us)
 {
-	unsigned int cache;
     Mutex::Autolock autoLock(mLock);
 
 //    mSeeking = true;
 //    mReachedEOS = false;
-    mNumFramesPlayed = 0;
 
     if (mAudioSink != NULL) {
         mAudioSink->flush();
-
-    	mAudioSink->getPosition(&cache);
-    	mNumFramesPlayed = cache*mFrameSize;
     } else {
         mAudioTrack->flush();
-
-        mAudioTrack->getPosition(&cache);
-    	mNumFramesPlayed = cache*mFrameSize;
     }
 
     return OK;

@@ -20,7 +20,7 @@
 
 #include <binder/IPCThreadState.h>
 #include <media/AudioTrack.h>
-#if (CEDARX_ANDROID_VERSION < 6)
+#ifdef __ANDROID_VERSION_2_3_4
 #include <media/stagefright/MediaDebug.h>
 #else
 #include <media/stagefright/foundation/ADebug.h>
@@ -79,24 +79,16 @@ status_t CedarAAudioPlayer::start(bool sourceAlreadyStarted)
 
     if (mAudioSink.get() != NULL) {
     	LOGV("AudioPlayer::start 0.1 ]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]");
-#if (CEDARX_ANDROID_VERSION < 7)
         status_t err = mAudioSink->open(
-#if (CEDARX_ANDROID_VERSION == 4)
+#ifdef __ANDROID_VERSION_2_3_4
                 mSampleRate, mNumChannels, AudioSystem::PCM_16_BIT,
 #else
                 mSampleRate, mNumChannels, AUDIO_FORMAT_PCM_16_BIT,
 #endif
                 DEFAULT_AUDIOSINK_BUFFERCOUNT,
                 &CedarAAudioPlayer::AudioSinkCallback, this);
-#else
-        int channelMask = CHANNEL_MASK_USE_CHANNEL_ORDER;
-        status_t err = mAudioSink->open(
-                mSampleRate, mNumChannels, channelMask, AUDIO_FORMAT_PCM_16_BIT,
-                DEFAULT_AUDIOSINK_BUFFERCOUNT,
-                &CedarAAudioPlayer::AudioSinkCallback,
-                this, AUDIO_OUTPUT_FLAG_NONE);
-#endif
         if (err != OK) {
+
             return err;
         }
 
@@ -106,7 +98,7 @@ status_t CedarAAudioPlayer::start(bool sourceAlreadyStarted)
         mAudioSink->start();
     } else {
     	status_t err;
-#if (CEDARX_ANDROID_VERSION < 6)
+#ifdef __ANDROID_VERSION_2_3_4
         mAudioTrack = new AudioTrack(
                 AudioSystem::MUSIC, mSampleRate, AudioSystem::PCM_16_BIT,
                 (mNumChannels == 2)
