@@ -17,7 +17,8 @@ LOCAL_SRC_FILES:=               \
     StagefrightPlayer.cpp       \
     StagefrightRecorder.cpp		\
     CedarAPlayerWrapper.cpp		\
-    SimpleMediaFormatProbe.cpp
+    SimpleMediaFormatProbe.cpp	\
+    MovAvInfoDetect.cpp
 
 LOCAL_SHARED_LIBRARIES :=     		\
 	libcutils             			\
@@ -53,6 +54,9 @@ LOCAL_C_INCLUDES :=                                                 \
 	$(TOP)/frameworks/base/media/libstagefright/include             \
 	$(TOP)/frameworks/base/media/libstagefright/rtsp                \
         $(TOP)/external/tremolo/Tremolo \
+
+
+LOCAL_CFLAGS+=-DCEDARX_ANDROID_VERSION=6
 
 LOCAL_MODULE:= libmediaplayerservice
 

@@ -77,6 +77,20 @@ status_t NuPlayer::StreamingSource::feedMoreTSData() {
                 type = mask;
             }
 
+            if (type & ATSParser::DISCONTINUITY_SEEK) {
+        		uint64_t resumeAtPTS;
+        		if (extra != NULL
+        				&& extra->findInt64(
+        					IStreamListener::kKeyResumeAtPTS,
+        					(int64_t *)&resumeAtPTS)) {
+        			LOGV("!@#$ resumeAtPTS:%lld",resumeAtPTS);
+        			if (resumeAtPTS == 0) {
+        				LOGV("!@#$ ignore signalDiscontinuity");
+        				continue;
+        			}
+        		}
+        	}
+        	
             mTSParser->signalDiscontinuity(
                     (ATSParser::DiscontinuityType)type, extra);
         } else if (n < 0) {
