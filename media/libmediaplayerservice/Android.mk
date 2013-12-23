@@ -14,7 +14,13 @@ LOCAL_SRC_FILES:=               \
     MidiMetadataRetriever.cpp   \
     MidiFile.cpp                \
     StagefrightPlayer.cpp       \
+<<<<<<< HEAD
     StagefrightRecorder.cpp
+=======
+    StagefrightRecorder.cpp		\
+    CedarAPlayerWrapper.cpp		\
+    SimpleMediaFormatProbe.cpp
+>>>>>>> libmediaplayer3
 
 LOCAL_SHARED_LIBRARIES :=     		\
 	libcutils             			\

@@ -78,6 +78,16 @@ StagefrightRecorder::StagefrightRecorder()
 StagefrightRecorder::~StagefrightRecorder() {
     LOGV("Destructor");
     stop();
+<<<<<<< HEAD
+=======
+
+	if (mpCedarXRecorder != NULL)
+	{	
+		delete mpCedarXRecorder;
+		mpCedarXRecorder = NULL;
+	}
+	mbHWEncoder = false;
+>>>>>>> libmediaplayer3
 }
 
 status_t StagefrightRecorder::init() {
@@ -730,11 +740,88 @@ status_t StagefrightRecorder::setListener(const sp<IMediaRecorderClient> &listen
 }
 
 status_t StagefrightRecorder::prepare() {
+<<<<<<< HEAD
     return OK;
 }
 
 status_t StagefrightRecorder::start() {
     CHECK(mOutputFd >= 0);
+=======
+	F_LOG;
+	status_t error = OK;	
+
+	// do not care audio encoder format
+	if(mVideoEncoder == VIDEO_ENCODER_H264
+		&& mpCedarXRecorder != NULL)
+	{
+		mbHWEncoder = true;
+	}
+
+	if (mbHWEncoder)
+	{
+		error = mpCedarXRecorder->setCamera(mCamera, mCameraProxy);
+		if (error != OK)
+		{
+			goto ERROR;
+		}
+		mpCedarXRecorder->setListener(mListener);
+
+		// audio
+		if (mAudioSource != AUDIO_SOURCE_CNT)
+		{
+			mpCedarXRecorder->setAudioSource(mAudioSource);
+			mpCedarXRecorder->setAudioEncoder(mAudioEncoder);
+			mpCedarXRecorder->setParamAudioEncodingBitRate(mAudioBitRate);
+			mpCedarXRecorder->setParamAudioNumberOfChannels(mAudioChannels);
+			mpCedarXRecorder->setParamAudioSamplingRate(mSampleRate);
+		}
+
+		// video
+		if (mVideoSource != VIDEO_SOURCE_LIST_END)
+		{
+			mpCedarXRecorder->setVideoSource(mVideoSource);
+			mpCedarXRecorder->setVideoEncoder(mVideoEncoder);
+			mpCedarXRecorder->setVideoSize(mVideoWidth, mVideoHeight);
+			mpCedarXRecorder->setParamVideoEncodingBitRate(mVideoBitRate);
+			mpCedarXRecorder->setVideoFrameRate(mFrameRate);
+			mpCedarXRecorder->setParamVideoRotation(mRotationDegrees);
+		}
+
+		// output
+		mpCedarXRecorder->setParamMaxFileDurationUs(mMaxFileDurationUs);
+		mpCedarXRecorder->setParamMaxFileSizeBytes(mMaxFileSizeBytes);
+		mpCedarXRecorder->setOutputFile(mOutputFd);
+		mpCedarXRecorder->setOutputFormat(mOutputFormat);
+		
+		mpCedarXRecorder->setPreviewSurface(mPreviewSurface);
+
+		// lapse
+		mpCedarXRecorder->setParamTimeLapseEnable(mCaptureTimeLapse);
+		mpCedarXRecorder->setParamTimeBetweenTimeLapseFrameCapture(mTimeBetweenTimeLapseFrameCaptureUs);
+
+		error = mpCedarXRecorder->prepare();
+		if (error != OK)
+		{
+			goto ERROR;
+		}
+	}
+
+ERROR:
+    return error;
+}
+
+status_t StagefrightRecorder::start() {
+	F_LOG;
+    CHECK(mOutputFd >= 0);
+	
+    status_t status = OK;
+	
+	if (mbHWEncoder)
+	{
+		status = mpCedarXRecorder->start();
+		goto HWENC_BATTERY;
+	}
+>>>>>>> libmediaplayer3
 
     if (mWriter != NULL) {
         LOGE("File writer is not avaialble");
