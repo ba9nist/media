@@ -31,6 +31,8 @@
 
 namespace android {
 
+#define DEVICE_BACK		"/dev/video0"
+#define DEVICE_FRONT	"/dev/video1"
 #define NB_BUFFER 4
 
 class CameraHardware;
@@ -145,6 +147,21 @@ public:
      */
     virtual status_t stopDeliveringFrames();
 
+    /* Gets current framebuffer, converted into preview frame format.
+     * This method must be called on a connected instance of this class with a
+     * started camera device. If it is called on a disconnected instance, or
+     * camera device has not been started, this method must return a failure.
+     * Note that this method should be called only after at least one frame has
+     * been captured and delivered. Otherwise it will return garbage in the
+     * preview frame buffer. Typically, this method shuld be called from
+     * onNextFrameAvailable callback.
+     * Param:
+     *  buffer - Buffer, large enough to contain the entire preview frame.
+     * Return:
+     *  NO_ERROR on success, or an appropriate error status.
+     */
+    virtual status_t getCurrentPreviewFrame(void* buffer);
+
     /* Gets width of the frame obtained from the physical device.
      * Return:
      *  Width of the frame obtained from the physical device. Note that value
@@ -234,12 +251,6 @@ public:
     inline bool isStarted() const {
         return mState == ECDS_STARTED;
     }
-
-	inline void setCallingProcess(char * str)
-	{
-		strcpy(mCallingProcessName, str);
-	}
-
 
     /****************************************************************************
      * V4L2Camera device private API
@@ -441,6 +452,9 @@ protected:
     /* V4L2Camera object containing this instance. */
     CameraHardware*             mCameraHAL;
 
+    /* Framebuffer containing the current frame. */
+    uint8_t*                    mCurrentFrame;
+
     /*
      * Framebuffer properties.
      */
@@ -483,24 +497,19 @@ protected:
 	
 protected:
 	bool						mTakingPicture;
+	bool						mInPictureThread;
 	int							mPictureWidth;
 	int							mPictureHeight;
-	
-	pthread_mutex_t 			mTakePhotoEndMutex;
-	pthread_cond_t				mTakePhotoEndCond;
 
-	bool						mThreadRunning;	
-	pthread_mutex_t 			mThreadRunningMutex;
-	pthread_cond_t				mThreadRunningCond;
-	
+	// add for CTS
+	int64_t						mStartDeliverTimeUs;
+
 public:
 	
 	inline void setTakingPicture(bool taking)
 	{
-		pthread_mutex_lock(&mTakePhotoEndMutex);
-		LOGV("setTakingPicture : %s", taking ? "true" : "false");
+		mInPictureThread = taking;
 		mTakingPicture = taking;
-		pthread_mutex_unlock(&mTakePhotoEndMutex);
 	}
 	
 	inline int getPictureSize(int * pic_w, int * pic_h)
@@ -517,25 +526,6 @@ public:
 		return OK;
     }
 
-	inline void setThreadRunning(bool running)
-	{
-		pthread_mutex_lock(&mThreadRunningMutex);
-		if (!mThreadRunning)
-		{
-			LOGV("setThreadRunning true");
-			mThreadRunning = running;
-			pthread_cond_signal(&mThreadRunningCond);
-		}
-		pthread_mutex_unlock(&mThreadRunningMutex);
-	}
-
-	inline bool getThreadRunning()
-	{
-		return mThreadRunning;
-	}
-
-protected:
-	char            mCallingProcessName[128];
 };
 
 }; /* namespace android */

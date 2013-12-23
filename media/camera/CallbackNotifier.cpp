@@ -83,24 +83,8 @@ static void PrintMessages(uint32_t msg)
     const char* strs[lCameraMessagesNum];
     const int translated = GetMessageStrings(msg, strs, lCameraMessagesNum);
     for (int n = 0; n < translated; n++) {
-        LOGD("    %s", strs[n]);
+        LOGV("    %s", strs[n]);
     }
-}
-
-static void NV12_down_scale(const void* src, void* dst, int src_width, int src_height, int dst_width, int dst_height)
-{
-	char * p_src_y = (char *)src;
-	char * p_dst_y = (char *)dst;
-	int scale = src_width / dst_width;
-	
-	int w = 0, h = 0;
-	for (h = 0; h < dst_height; h++)
-	{
-		for (w = 0; w < dst_width; w++)
-		{
-			*(p_dst_y + h * dst_width + w) = *(p_src_y + h * scale * src_width + w * scale);
-		}
-	}
 }
 
 CallbackNotifier::CallbackNotifier()
@@ -122,11 +106,9 @@ CallbackNotifier::CallbackNotifier()
 	  mGpsTimestamp(0),
 	  mThumbWidth(0),
 	  mThumbHeight(0),
-	  mFocalLength(0.0),
-	  mWhiteBalance(0)
+	  mFocalLength(0.0)
 {
-	memset(mGpsMethod, 0, sizeof(mGpsMethod));
-	memset(mCallingProcessName, 0, sizeof(mCallingProcessName));
+	memset(mGpsMethod, 0, 100);
 }
 
 CallbackNotifier::~CallbackNotifier()
@@ -143,7 +125,7 @@ void CallbackNotifier::setCallbacks(camera_notify_callback notify_cb,
                                     camera_request_memory get_memory,
                                     void* user)
 {
-    LOGD("%s: %p, %p, %p, %p (%p)",
+    LOGV("%s: %p, %p, %p, %p (%p)",
          __FUNCTION__, notify_cb, data_cb, data_cb_timestamp, get_memory, user);
 
     Mutex::Autolock locker(&mObjectLock);
@@ -156,29 +138,29 @@ void CallbackNotifier::setCallbacks(camera_notify_callback notify_cb,
 
 void CallbackNotifier::enableMessage(uint msg_type)
 {
-    LOGD("%s: msg_type = 0x%x", __FUNCTION__, msg_type);
+    LOGV("%s: msg_type = 0x%x", __FUNCTION__, msg_type);
     PrintMessages(msg_type);
 
     Mutex::Autolock locker(&mObjectLock);
     mMessageEnabler |= msg_type;
-    LOGD("**** Currently enabled messages:");
+    LOGV("**** Currently enabled messages:");
     PrintMessages(mMessageEnabler);
 }
 
 void CallbackNotifier::disableMessage(uint msg_type)
 {
-    LOGD("%s: msg_type = 0x%x", __FUNCTION__, msg_type);
+    LOGV("%s: msg_type = 0x%x", __FUNCTION__, msg_type);
     PrintMessages(msg_type);
 
     Mutex::Autolock locker(&mObjectLock);
     mMessageEnabler &= ~msg_type;
-    LOGD("**** Currently enabled messages:");
+    LOGV("**** Currently enabled messages:");
     PrintMessages(mMessageEnabler);
 }
 
 status_t CallbackNotifier::enableVideoRecording(int fps)
 {
-    LOGD("%s: FPS = %d", __FUNCTION__, fps);
+    LOGV("%s: FPS = %d", __FUNCTION__, fps);
 
     Mutex::Autolock locker(&mObjectLock);
     mVideoRecEnabled = true;
@@ -190,7 +172,7 @@ status_t CallbackNotifier::enableVideoRecording(int fps)
 
 void CallbackNotifier::disableVideoRecording()
 {
-    LOGD("%s:", __FUNCTION__);
+    LOGV("%s:", __FUNCTION__);
 
     Mutex::Autolock locker(&mObjectLock);
     mVideoRecEnabled = false;
@@ -307,52 +289,22 @@ void CallbackNotifier::onNextFrameSW(const void* frame,
     }
 
     if (isMessageEnabled(CAMERA_MSG_PREVIEW_FRAME)) {
-		if (strcmp(mCallingProcessName, "com.android.facelock") == 0)
-		{
-			int frame_w = camera_dev->getFrameWidth();
-			int frame_h = camera_dev->getFrameHeight();
-			camera_memory_t* cam_buff =
-	            mGetMemoryCB(-1, 160 * 120 * 3 / 2, 1, NULL);
-	        if (NULL != cam_buff && NULL != cam_buff->data) {
-				NV12_down_scale(frame, cam_buff->data, 
-								frame_w, frame_h,
-								160, 120);
-	            mDataCB(CAMERA_MSG_PREVIEW_FRAME, cam_buff, 0, NULL, mCallbackCookie);
-	            cam_buff->release(cam_buff);
-	        } else {
-	            LOGE("%s: Memory failure in CAMERA_MSG_PREVIEW_FRAME", __FUNCTION__);
-	        }
-		}
-		else
-		{
-	        camera_memory_t* cam_buff =
-	            mGetMemoryCB(-1, camera_dev->getFrameBufferSize(), 1, NULL);
-	        if (NULL != cam_buff && NULL != cam_buff->data) {
-	            memcpy(cam_buff->data, frame, camera_dev->getFrameBufferSize());
-	            mDataCB(CAMERA_MSG_PREVIEW_FRAME, cam_buff, 0, NULL, mCallbackCookie);
-	            cam_buff->release(cam_buff);
-	        } else {
-	            LOGE("%s: Memory failure in CAMERA_MSG_PREVIEW_FRAME", __FUNCTION__);
-	        }
-		}
+        camera_memory_t* cam_buff =
+            mGetMemoryCB(-1, camera_dev->getFrameBufferSize(), 1, NULL);
+        if (NULL != cam_buff && NULL != cam_buff->data) {
+            memcpy(cam_buff->data, frame, camera_dev->getFrameBufferSize());
+            mDataCB(CAMERA_MSG_PREVIEW_FRAME, cam_buff, 0, NULL, mCallbackCookie);
+            cam_buff->release(cam_buff);
+        } else {
+            LOGE("%s: Memory failure in CAMERA_MSG_PREVIEW_FRAME", __FUNCTION__);
+        }
     }
 }
 
-status_t CallbackNotifier::autoFocus(bool success)
+status_t CallbackNotifier::autoFocus()
 {
 	if (isMessageEnabled(CAMERA_MSG_FOCUS))
-        mNotifyCB(CAMERA_MSG_FOCUS, success, 0, mCallbackCookie);
-    return NO_ERROR;
-}
-
-status_t CallbackNotifier::faceDetection(camera_frame_metadata_t *face)
-{
-	if (isMessageEnabled(CAMERA_MSG_PREVIEW_METADATA))
-	{
-		camera_memory_t *cam_buff = mGetMemoryCB(-1, 1, 1, NULL);
-		mDataCB(CAMERA_MSG_PREVIEW_METADATA, cam_buff, 0, face, mCallbackCookie);
-		cam_buff->release(cam_buff); 
-	}
+        mNotifyCB(CAMERA_MSG_FOCUS, true, 0, mCallbackCookie);
     return NO_ERROR;
 }
 
@@ -397,8 +349,9 @@ void CallbackNotifier::takePictureHW(const void* frame, V4L2Camera* camera_dev)
         if (NULL != cam_buff && NULL != cam_buff->data) 
 		{
             memset(cam_buff->data, 0xff, camera_dev->getFrameBufferSize());
-			mDataCB(CAMERA_MSG_RAW_IMAGE, cam_buff, 0, NULL, mCallbackCookie);
+			mDataCB(CAMERA_MSG_RAW_IMAGE_NOTIFY, cam_buff, 0, NULL, mCallbackCookie);
 			// mNotifyCB(CAMERA_MSG_RAW_IMAGE_NOTIFY, 0, 0, mCallbackCookie);
+			// mNotifyCB(CAMERA_MSG_RAW_IMAGE_NOTIFY, cam_buff, 0, NULL, mCallbackCookie);
             cam_buff->release(cam_buff);
         } 
 		else 
@@ -413,7 +366,6 @@ void CallbackNotifier::takePictureHW(const void* frame, V4L2Camera* camera_dev)
 		void * pOutBuf = NULL;
 		int bufSize = 0;
 		int pic_w, pic_h;
-		int factor = 0;
 
 		camera_dev->getPictureSize(&pic_w, &pic_h);
 			
@@ -429,22 +381,10 @@ void CallbackNotifier::takePictureHW(const void* frame, V4L2Camera* camera_dev)
 		jpeg_enc.quality		= mJpegQuality;
 		jpeg_enc.rotate			= mJpegRotate;
 		
-		jpeg_enc.thumbWidth		= mThumbWidth;
-		jpeg_enc.thumbHeight	= mThumbHeight;
-		jpeg_enc.whitebalance   = mWhiteBalance;
+		// do not use thumb now
+		jpeg_enc.thumbWidth		= 0; // mThumbWidth;
+		jpeg_enc.thumbHeight	= 0; // mThumbHeight;
 
-		if ((mThumbWidth != 0) && (mThumbHeight != 0))
-		{
-			if ((jpeg_enc.src_w / mThumbWidth >= 4) && (jpeg_enc.src_h / mThumbHeight >= 4))
-			{
-				factor = 2;
-			}
-			else if ((jpeg_enc.src_w / mThumbWidth >= 2) && (jpeg_enc.src_h / mThumbHeight >= 2))
-			{
-				factor = 1;
-			}
-		}
-		jpeg_enc.scale_factor	= factor;
 		jpeg_enc.focal_length	= mFocalLength;
 
 		if (0 != strlen(mGpsMethod))
@@ -461,35 +401,15 @@ void CallbackNotifier::takePictureHW(const void* frame, V4L2Camera* camera_dev)
 		{
 			jpeg_enc.enable_gps			= 0;
 		}
-
-		if ((pbuf->crop_rect.width != jpeg_enc.src_w)
-			|| (pbuf->crop_rect.height != jpeg_enc.src_h))
-		{
-			jpeg_enc.enable_crop		= 1;
-			jpeg_enc.crop_x				= pbuf->crop_rect.left;
-			jpeg_enc.crop_y				= pbuf->crop_rect.top;
-			jpeg_enc.crop_w				= pbuf->crop_rect.width;
-			jpeg_enc.crop_h				= pbuf->crop_rect.height;
-		}
-		else
-		{
-			jpeg_enc.enable_crop		= 0;
-		}
 		
-		LOGD("addrY: %x, src: %dx%d, pic: %dx%d, quality: %d, rotate: %d, Gps method: %s, \
-			thumbW: %d, thumbH: %d, thubmFactor: %d, crop: [%d, %d, %d, %d]", 
+		LOGD("addrY: %x, src: %dx%d, pic: %dx%d, quality: %d, rotate: %d,Gps method: %s, thumbW: %d, thumbH: %d", 
 			jpeg_enc.addrY, 
 			jpeg_enc.src_w, jpeg_enc.src_h,
 			jpeg_enc.pic_w, jpeg_enc.pic_h,
 			jpeg_enc.quality, jpeg_enc.rotate,
 			jpeg_enc.gps_processing_method,
 			jpeg_enc.thumbWidth,
-			jpeg_enc.thumbHeight,
-			jpeg_enc.scale_factor,
-			jpeg_enc.crop_x,
-			jpeg_enc.crop_y,
-			jpeg_enc.crop_w,
-			jpeg_enc.crop_h);
+			jpeg_enc.thumbHeight);
 		
 		pOutBuf = (void *)malloc(jpeg_enc.pic_w * jpeg_enc.pic_h << 2);
 		if (pOutBuf == NULL)
@@ -497,15 +417,13 @@ void CallbackNotifier::takePictureHW(const void* frame, V4L2Camera* camera_dev)
 			LOGE("malloc picture memory failed");
 			return ;
 		}
-
-		int64_t lasttime = systemTime();
+		
 		int ret = JpegEnc(pOutBuf, &bufSize, &jpeg_enc);
 		if (ret < 0)
 		{
 			LOGE("JpegEnc failed");
 			return ;			
 		}
-		LOGD("hw enc time: %lld(ms)", (systemTime() - lasttime)/1000000);
 
 		camera_memory_t* jpeg_buff = mGetMemoryCB(-1, bufSize, 1, NULL);
 		if (NULL != jpeg_buff && NULL != jpeg_buff->data) 
@@ -525,6 +443,8 @@ void CallbackNotifier::takePictureHW(const void* frame, V4L2Camera* camera_dev)
 			pOutBuf = NULL;
 		}
     }
+
+	LOGD("taking photo to CAMERA_MSG_POSTVIEW_FRAME");
 
 	if (isMessageEnabled(CAMERA_MSG_POSTVIEW_FRAME) )
 	{

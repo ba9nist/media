@@ -288,18 +288,7 @@ public:
 		mFocalLength = val;
 	}
 	
-	inline void setWhiteBalance(int whitebalance)
-	{
-		mWhiteBalance = whitebalance;
-	}
-	
-	inline void setCallingProcess(char * str)
-	{
-		strcpy(mCallingProcessName, str);
-	}
-
-	status_t autoFocus(bool success);
-	status_t faceDetection(camera_frame_metadata_t *face);
+	status_t autoFocus();
 
 	void takePicture(const void* frame, V4L2Camera* camera_dev, bool bUseMataData);
 	void takePictureHW(const void* frame, V4L2Camera* camera_dev);
@@ -322,9 +311,6 @@ protected:
 	int			mThumbHeight;
 	
 	double		mFocalLength;
-	int 		mWhiteBalance;
-
-	char		mCallingProcessName[128];
 };
 
 }; /* namespace android */

@@ -22,11 +22,13 @@
  * a fake camera device.
  */
 
-#include <ui/Rect.h>
 #include "Converters.h"
 #include "V4L2Camera.h"
-#include "OSAL_Queue.h"
 #include <type_camera.h>
+
+// preview size should not larger than 1280x720
+#define MAX_PREVIEW_WIDTH	1280
+#define MAX_PREVIEW_HEIGHT	720
 
 namespace android {
 
@@ -91,59 +93,13 @@ protected:
 	// -------------------------------------------------------------------------
 	// extended interfaces here <***** star *****>
 	// -------------------------------------------------------------------------
-	
-	class DoPreviewThread : public Thread {
-        V4L2CameraDevice* mV4l2CameraDevice;
-    public:
-        DoPreviewThread(V4L2CameraDevice* dev) :
-			Thread(false),
-			mV4l2CameraDevice(dev) {
-		}
-        void startThread() {
-			run("CameraPreviewThread", PRIORITY_URGENT_DISPLAY);
-        }
-		void stopThread() {
-			LOGD("================ wait preview thread exit");
-			requestExitAndWait();
-			LOGD("================ preview thread exit ok");
-        }
-        virtual bool threadLoop() {
-			return mV4l2CameraDevice->previewThread();
-        }
-    };
-
-	class DoPictureThread : public Thread {
-        V4L2CameraDevice* mV4l2CameraDevice;
-    public:
-        DoPictureThread(V4L2CameraDevice* dev) :
-			Thread(false),
-			mV4l2CameraDevice(dev) {
-		}
-		void startThread() {
-			run("CameraPictrueThread", PRIORITY_URGENT_DISPLAY);
-		}
-		
-		void stopThread() {
-			LOGD("================ wait preview thread exit");
-			requestExitAndWait();
-			LOGD("================ preview thread exit ok");
-        }
-		virtual bool threadLoop() {
-			return mV4l2CameraDevice->pictureThread();
-		}
-    };
 
 public:
-
-	bool previewThread();
-	bool pictureThread();
 
 	virtual status_t Initialize();
 	int setV4L2DeviceName(char * pname);			// set device node name, such as "/dev/video0"
 	int setV4L2DeviceID(int device_id);				// set different device id on the same CSI
-	int tryFmt(int format);							// check if driver support this format
 	int tryFmtSize(int * width, int * height);		// check if driver support this size
-	int setFrameRate(int rate);						// set frame rate from camera.cfg
 	int getFrameRate();								// get v4l2 device current frame rate
 	int setCameraFacing(int facing);
 
@@ -152,44 +108,25 @@ public:
 	int setExposure(int exp);
 	int setFlashMode(int mode);
 	
-	int enumSize(char * pSize, int len);
-	int setAutoFocusMode(int af);
-	int setAutoFocusCtrl(int af_ctrl, void * areas);
-	int getAutoFocusStatus(int af_ctrl);
-	
 	void releasePreviewFrame(int index);			// Q buffer for encoder
-
-	int getCurrentFaceFrame(void * frame);
-
-	inline void setCrop(int new_zoom, int max_zoom)
+	
+	inline void prepareTakePhoto(bool prepare)
 	{
-		mLastZoom = mNewZoom;
-		mNewZoom = new_zoom;
-		mMaxZoom = max_zoom;
+		mPrepareTakePhoto = prepare;
 	}
-
-	inline int getCaptureFormat()
-	{
-		return mCaptureFormat;
-	}
-
-	inline void setHwEncoder(bool hw)
-	{
-		mUseHwEncoder = hw;
-	}
+	
+	void waitPrepareTakePhoto();
 	
 private:
 	int openCameraDev();
 	void closeCameraDev();
 	int v4l2SetVideoParams(int width, int height, uint32_t pix_fmt);
-	int v4l2setCaptureParams(struct v4l2_streamparm * params);
 	int v4l2ReqBufs();
 	int v4l2QueryBuf();
 	int v4l2StartStreaming(); 
 	int v4l2StopStreaming(); 
 	int v4l2UnmapBuf();
-
-	int v4l2WaitCameraReady();
+	
 	int getPreviewFrame(v4l2_buffer *buf);
 	
 	void dealWithVideoFrameSW(V4L2BUF_t * pBuf);
@@ -199,11 +136,6 @@ private:
 	/* Checks if it's the time to push new frame to the preview window.
 	 * Note that this method must be called while object is locked. */
 	bool isPreviewTime();
-
-#if USE_MP_CONVERT
-	// use for YUYV to YUV420C
-	void YUYVToYUV420C(const void* yuyv, void *yuv420, int width, int height);
-#endif
 
 private:
 	// -------------------------------------------------------------------------
@@ -221,8 +153,6 @@ private:
 
 	// device id on the CSI, used when two camera device shared with one CSI
 	int								mDeviceID;
-
-	int								mFrameRate;
 
 	// camera facing back / front
 	int								mCameraFacing;
@@ -246,7 +176,8 @@ private:
     /* Preview frequency in microseconds. */
     uint32_t                        mPreviewAfter;
 
-	bool							mUseHwEncoder;
+	// 
+	bool							mPrepareTakePhoto;
 
 	typedef struct bufferManagerQ_t
 	{
@@ -257,35 +188,12 @@ private:
 		int			buf_unused;
 	}bufferManagerQ_t;
 
-	pthread_mutex_t					mTakePhotoMutex;
-	pthread_cond_t					mTakePhotoCond;
-	
-	Rect							mRectCrop;
-	int								mNewZoom;
-	int								mLastZoom;
-	int								mMaxZoom;
+	bufferManagerQ_t				mPreviewBuffer;
+	int								mPreviewBufferID;
 
-	int								mCaptureFormat;		// for usb camera
-	int								mVideoFormat;		// for usb camera
-	bufferManagerQ_t				mVideoBuffer;		// for usb camera
-	int                             mTakingPictureFrame;//for usb camera
-
-#if USE_MP_CONVERT
-	int 							mG2DHandle;
-#endif
-
-	OSAL_QUEUE						mQueueBuffer;
-	V4L2BUF_t						mV4l2buf[NB_BUFFER];
-
-	sp<DoPreviewThread>				mPreviewThread;
-	sp<DoPictureThread>				mPictureThread;
-
-	V4L2BUF_t *						mCurrentV4l2buf;
-	bool							mFaceDetectionEnable;
-
-	pthread_mutex_t 				mPreviewMutex;
-	pthread_cond_t					mPreviewCond;
-};	
+	pthread_mutex_t					mMutexTakePhoto;
+	pthread_cond_t					mCondTakePhoto;
+};
 
 }; /* namespace android */
 

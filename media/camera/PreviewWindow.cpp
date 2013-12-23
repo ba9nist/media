@@ -25,51 +25,11 @@
 #include <ui/Rect.h>
 #include <ui/GraphicBufferMapper.h>
 #include <type_camera.h>
-#include <hwcomposer.h>
-#ifdef __SUN4I__
-#include <drv_display_sun4i.h>
-#else
-#include <drv_display_sun5i.h>
-#endif
-
+#include <hardware/hwcomposer.h>
 #include "V4L2Camera.h"
 #include "PreviewWindow.h"
 
 namespace android {
-
-static void NV12ToNV21(const void* nv12, void* nv21, int width, int height)
-{	
-struct timeval tv;
-gettimeofday(&tv,NULL);
-LOGD("NV12ToNV21 TIME1  =  %u",tv.tv_usec);
-	char * src_uv = (char *)nv12 + width * height;
-	char * dst_uv = (char *)nv21 + width * height;
-
-	memcpy(nv21, nv12, width * height);
-
-	for(int i = 0; i < width * height / 2; i += 2)
-	{
-		*(dst_uv + i) = *(src_uv + i + 1);
-		*(dst_uv + i + 1) = *(src_uv + i);
-	}
-gettimeofday(&tv,NULL);
-LOGD("NV12ToNV21 TIME2  =  %u",tv.tv_usec);
-}
-
-static void NV12ToNV21_shift(const void* nv12, void* nv21, int width, int height)
-{	
-struct timeval tv;
-gettimeofday(&tv,NULL);
-LOGD("NV12ToNV21_shift TIME1  =  %u",tv.tv_usec);
-	char * src_uv = (char *)nv12 + width * height;
-	char * dst_uv = (char *)nv21 + width * height;
-
-	memcpy(nv21, nv12, width * height);
-	memcpy(dst_uv, src_uv + 1, width * height / 2 - 1);
-
-gettimeofday(&tv,NULL);
-LOGD("NV12ToNV21_shift TIME2  =  %u",tv.tv_usec);
-}
 
 PreviewWindow::PreviewWindow()
     : mPreviewWindow(NULL),
@@ -79,18 +39,14 @@ PreviewWindow::PreviewWindow()
       mOverlayFirstFrame(true),
       mShouldAdjustDimensions(true),
       mLayerFormat(-1),
-      mScreenID(0),
-      mNewCrop(false)
+      mScreenID(0)
 {
 	F_LOG;
-	memset(&mRectCrop, 0, sizeof(mRectCrop));
 }
 
 PreviewWindow::~PreviewWindow()
 {
 	F_LOG;
-	mPreviewWindow = NULL;
-	mPreviewWindow->perform = NULL;
 }
 
 /****************************************************************************
@@ -100,7 +56,7 @@ PreviewWindow::~PreviewWindow()
 status_t PreviewWindow::setPreviewWindow(struct preview_stream_ops* window,
                                          int preview_fps)
 {
-    LOGD("%s: current: %p -> new: %p", __FUNCTION__, mPreviewWindow, window);
+    LOGV("%s: current: %p -> new: %p", __FUNCTION__, mPreviewWindow, window);
 	
     status_t res = NO_ERROR;
     Mutex::Autolock locker(&mObjectLock);
@@ -127,7 +83,7 @@ status_t PreviewWindow::setPreviewWindow(struct preview_stream_ops* window,
 
 status_t PreviewWindow::startPreview()
 {
-    LOGD("%s", __FUNCTION__);
+    LOGV("%s", __FUNCTION__);
 
     Mutex::Autolock locker(&mObjectLock);
     mPreviewEnabled = true;
@@ -138,7 +94,7 @@ status_t PreviewWindow::startPreview()
 
 void PreviewWindow::stopPreview()
 {
-    LOGD("%s", __FUNCTION__);
+    LOGV("%s", __FUNCTION__);
 
     Mutex::Autolock locker(&mObjectLock);
     mPreviewEnabled = false;
@@ -149,23 +105,21 @@ void PreviewWindow::stopPreview()
  * Public API
  ***************************************************************************/
 bool PreviewWindow::onNextFrameAvailable(const void* frame,
-										 int video_fmt,
 										 nsecs_t timestamp,
 										 V4L2Camera* camera_dev,
                                          bool bUseMataData)
 {
 	if (bUseMataData)
 	{
-		return onNextFrameAvailableHW(frame, video_fmt, timestamp, camera_dev);
+		return onNextFrameAvailableHW(frame, timestamp, camera_dev);
 	}
 	else
 	{
-		return onNextFrameAvailableSW(frame, video_fmt, timestamp, camera_dev);
+		return onNextFrameAvailableSW(frame, timestamp, camera_dev);
 	}
 }
 
 bool PreviewWindow::onNextFrameAvailableHW(const void* frame,
-										 int video_fmt,
                                          nsecs_t timestamp,
                                          V4L2Camera* camera_dev)
 {
@@ -189,7 +143,7 @@ bool PreviewWindow::onNextFrameAvailableHW(const void* frame,
                                                    mPreviewFrameWidth,
                                                    mPreviewFrameHeight,
                                                    HWC_FORMAT_DEFAULT,
-                                                   mScreenID);
+                                                   0);
         if (res != NO_ERROR) {
             LOGE("%s: Error in set_buffers_geometry %d -> %s",
                  __FUNCTION__, -res, strerror(-res));
@@ -200,16 +154,6 @@ bool PreviewWindow::onNextFrameAvailableHW(const void* frame,
 
 		mPreviewWindow->perform(mPreviewWindow, NATIVE_WINDOW_SETPARAMETER, HWC_LAYER_SETFORMAT, mLayerFormat);
 		mShouldAdjustDimensions = false;
-
-		mPreviewWindow->set_crop(mPreviewWindow, 
-			mRectCrop.left, mRectCrop.top, mRectCrop.right, mRectCrop.bottom);
-
-		mNewCrop = false;
-
-		LOGD("first hw: [%d, %d, %d, %d]", mRectCrop.left,
-										mRectCrop.top,
-										mRectCrop.right,
-										mRectCrop.bottom);
     }
 
 	libhwclayerpara_t overlay_para;
@@ -237,14 +181,6 @@ bool PreviewWindow::onNextFrameAvailableHW(const void* frame,
 	
 	// LOGV("addrY: %x, addrC: %x, WXH: %dx%d", overlay_para.top_y, overlay_para.top_c, mPreviewFrameWidth, mPreviewFrameHeight);
 
-	if (mNewCrop)
-	{
-		mPreviewWindow->set_crop(mPreviewWindow, 
-			mRectCrop.left, mRectCrop.top, mRectCrop.right, mRectCrop.bottom);
-
-		mNewCrop = false;
-	}
-
 	res = mPreviewWindow->perform(mPreviewWindow, NATIVE_WINDOW_SETPARAMETER, HWC_LAYER_SETFRAMEPARA, (uint32_t)&overlay_para);
 	if (res != OK)
 	{
@@ -261,14 +197,13 @@ bool PreviewWindow::onNextFrameAvailableHW(const void* frame,
 }
 
 bool PreviewWindow::onNextFrameAvailableSW(const void* frame,
-										 int video_fmt,
                                          nsecs_t timestamp,
                                          V4L2Camera* camera_dev)
 {
     int res;
     Mutex::Autolock locker(&mObjectLock);
 
-	 LOGD("%s, timestamp: %lld", __FUNCTION__, timestamp);
+	// LOGD("%s, timestamp: %lld", __FUNCTION__, timestamp);
 
     if (!isPreviewEnabled() || mPreviewWindow == NULL) 
 	{
@@ -283,43 +218,16 @@ bool PreviewWindow::onNextFrameAvailableSW(const void* frame,
         LOGD("%s: Adjusting preview windows %p geometry to %dx%d",
              __FUNCTION__, mPreviewWindow, mPreviewFrameWidth,
              mPreviewFrameHeight);
-		
-		int format = HAL_PIXEL_FORMAT_YCrCb_420_SP;
-		LOGD("preview format: HAL_PIXEL_FORMAT_YCrCb_420_SP");
-
         res = mPreviewWindow->set_buffers_geometry(mPreviewWindow,
                                                    mPreviewFrameWidth,
                                                    mPreviewFrameHeight,
-												   format);
+                                                   HAL_PIXEL_FORMAT_RGBA_8888);
         if (res != NO_ERROR) {
             LOGE("%s: Error in set_buffers_geometry %d -> %s",
                  __FUNCTION__, -res, strerror(-res));
             // return false;
         }
 		mShouldAdjustDimensions = false;
-
-		res = mPreviewWindow->set_buffer_count(mPreviewWindow, 3);
-		if (res != 0) 
-		{
-	        LOGE("native_window_set_buffer_count failed: %s (%d)", strerror(-res), -res);
-
-	        if ( ENODEV == res ) {
-	            LOGE("Preview surface abandoned!");
-	            mPreviewWindow = NULL;
-	        }
-
-	        return false;
-	    }
-
-		mPreviewWindow->set_crop(mPreviewWindow, 
-			mRectCrop.left, mRectCrop.top, mRectCrop.right, mRectCrop.bottom);
-
-		mNewCrop = false;
-
-		LOGD("first sw: [%d, %d, %d, %d]", mRectCrop.left,
-										mRectCrop.top,
-										mRectCrop.right,
-										mRectCrop.bottom);
     }
 
     /*
@@ -333,11 +241,6 @@ bool PreviewWindow::onNextFrameAvailableSW(const void* frame,
     if (res != NO_ERROR || buffer == NULL) {
         LOGE("%s: Unable to dequeue preview window buffer: %d -> %s",
             __FUNCTION__, -res, strerror(-res));
-
-		int undequeued = 0;
-		mPreviewWindow->get_min_undequeued_buffer_count(mPreviewWindow, &undequeued);
-		LOGW("now undequeued: %d", undequeued);
-		
         return false;
     }
 
@@ -363,24 +266,16 @@ bool PreviewWindow::onNextFrameAvailableSW(const void* frame,
         return false;
     }
 
-	if (mNewCrop)
-	{
-		mPreviewWindow->set_crop(mPreviewWindow, 
-			mRectCrop.left, mRectCrop.top, mRectCrop.right, mRectCrop.bottom);
-
-		mNewCrop = false;
-	}
-
-	if (video_fmt == V4L2_PIX_FMT_NV21)
-	{
-		memcpy(img, frame, mPreviewFrameWidth * mPreviewFrameHeight * 3/2);
-	}
-	else
-	{
-		NV12ToNV21_shift(frame, img, mPreviewFrameWidth, mPreviewFrameHeight);
-	}
-	mPreviewWindow->enqueue_buffer(mPreviewWindow, buffer);
-
+    /* Frames come in in YV12/NV12/NV21 format. Since preview window doesn't
+     * supports those formats, we need to obtain the frame in RGB565. */
+    res = camera_dev->getCurrentPreviewFrame(img);
+    if (res == NO_ERROR) {
+        /* Show it. */
+        mPreviewWindow->enqueue_buffer(mPreviewWindow, buffer);
+    } else {
+        LOGE("%s: Unable to obtain preview frame: %d", __FUNCTION__, res);
+        mPreviewWindow->cancel_buffer(mPreviewWindow, buffer);
+    }
     grbuffer_mapper.unlock(*buffer);
 
 	return true;
@@ -410,9 +305,9 @@ bool PreviewWindow::adjustPreviewDimensions(V4L2Camera* camera_dev)
 
 int PreviewWindow::showLayer(bool on)
 {
-	LOGD("%s, %s", __FUNCTION__, on ? "on" : "off");
+	LOGV("%s, %s", __FUNCTION__, on ? "on" : "off");
 	mLayerShowHW = on ? 1 : 0;
-	if (mPreviewWindow != NULL && mPreviewWindow->perform != NULL)
+	if (mPreviewWindow != NULL)
 	{
 		mPreviewWindow->perform(mPreviewWindow, NATIVE_WINDOW_SETPARAMETER, HWC_LAYER_SHOW, mLayerShowHW);
 	}
@@ -421,7 +316,7 @@ int PreviewWindow::showLayer(bool on)
 
 int PreviewWindow::setLayerFormat(int fmt)
 {
-	LOGD("%s, %d", __FUNCTION__, fmt);
+	LOGV("%s, %d", __FUNCTION__, fmt);
 	mLayerFormat = fmt;	
 	mShouldAdjustDimensions = true;
 	return OK;
@@ -429,11 +324,11 @@ int PreviewWindow::setLayerFormat(int fmt)
 
 int PreviewWindow::setScreenID(int id)
 {
-	LOGD("%s, id: %d", __FUNCTION__, id);
+	LOGV("%s, id: %d", __FUNCTION__, id);
 	mScreenID = id;
-	if (mPreviewWindow != NULL && mPreviewWindow->perform != NULL)
+	if (mPreviewWindow != NULL)
 	{
-		mPreviewWindow->perform(mPreviewWindow, NATIVE_WINDOW_SETPARAMETER, HWC_LAYER_SETMODE, mScreenID);
+		mPreviewWindow->perform(mPreviewWindow, NATIVE_WINDOW_SETPARAMETER, HWC_LAYER_SETSCREEN, mScreenID);
 	}
 	return OK;
 }

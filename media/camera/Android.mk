@@ -31,19 +31,14 @@ LOCAL_SHARED_LIBRARIES += \
 	libskia \
 	libandroid_runtime \
 	libCedarX \
-	libcedarxosal \
-	libfacedetection
+	libcedarxosal
 	
-LOCAL_C_INCLUDES += 								\
-	external/jpeg 									\
-	external/skia/include/core/ 					\
-	frameworks/base/core/jni/android/graphics 		\
-	frameworks/base/include/media/stagefright/openmax \
-	$(TOP)/frameworks/base/media/CedarX-Projects/CedarX/include/include_camera \
-	hardware/libhardware/include/hardware \
-	external/neven/FaceRecEm/common/src/b_FDSDK     \
-	$(TARGET_HARDWARE_INCLUDE)
-					
+LOCAL_C_INCLUDES += \
+	external/jpeg \
+	external/skia/include/core \
+	frameworks/base/core/jni/android/graphics \
+	device/allwinner/common/include \
+	external/cedarx/CedarX/include/include_camera \
 
 LOCAL_SRC_FILES := \
 	CameraHal.cpp \
@@ -56,49 +51,11 @@ LOCAL_SRC_FILES := \
 	PreviewWindow.cpp \
 	CallbackNotifier.cpp \
 	JpegCompressor.cpp \
-	CCameraConfig.cpp \
-	OSAL_Mutex.c \
-	OSAL_Queue.c
-	
+	CCameraConfig.cpp
 
-ifneq ($(filter nuclear%,$(TARGET_DEVICE)),)
-LOCAL_CFLAGS += -D__SUN5I__
-endif
-
-ifneq ($(filter crane%,$(TARGET_DEVICE)),)
-LOCAL_CFLAGS += -D__SUN4I__
-endif
-
-ifneq ($(filter elite%,$(TARGET_DEVICE)),)
-LOCAL_CFLAGS += -D__SUN5I__
-endif
-
-ifneq ($(filter apollo%,$(TARGET_DEVICE)),)
-LOCAL_CFLAGS += -D__SUN4I__
-endif
 
 LOCAL_MODULE := camera.$(TARGET_BOARD_PLATFORM)
 
 LOCAL_MODULE_TAGS := optional
 include $(BUILD_SHARED_LIBRARY)
-
-#-------------------------------------------------------------------------------
-# 
-#-------------------------------------------------------------------------------
-# include $(CLEAR_VARS)
-# LOCAL_C_INCLUDES:= \
-# 	external/neven/FaceRecEm/common/src/b_FDSDK     \
-# 	$(TOP)/frameworks/base/media/CedarX-Projects/CedarX/include/include_camera \
-# 	$(TARGET_HARDWARE_INCLUDE)
-# 	
-# LOCAL_SRC_FILES:= \
-# 	FaceDetection.cpp \
-# 	
-# LOCAL_MODULE := libfacedetection
-# 
-# LOCAL_SHARED_LIBRARIES:= libcutils libutils libtinyalsa liblog libFFTEm
-# 
-# LOCAL_MODULE_TAGS := optional
-# 
-# include $(BUILD_SHARED_LIBRARY)
 

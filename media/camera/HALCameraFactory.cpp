@@ -72,7 +72,16 @@ HALCameraFactory::HALCameraFactory()
 	for (int id = 0; id < mCameraHardwareNum; id++)
 	{
 		mHardwareCameras[id] = new CameraHardwareDevice(id, &HAL_MODULE_INFO_SYM.common);
-		if (mHardwareCameras[id] == NULL)
+		if (mHardwareCameras[id] != NULL) 
+		{
+	        if (mHardwareCameras[id]->Initialize() != NO_ERROR) 
+			{
+	            delete mHardwareCameras[id];
+	            mHardwareCameras--;
+				return;
+		    } 
+		}
+		else 
 		{
 	        mHardwareCameras--;
 	        LOGE("%s: Unable to instantiate fake camera class", __FUNCTION__);
@@ -80,7 +89,7 @@ HALCameraFactory::HALCameraFactory()
 	    }
 	}
 
-	LOGD("%d cameras are being created.", mCameraHardwareNum);
+	LOGV("%d cameras are being created.", mCameraHardwareNum);
 
     mConstructedOK = true;
 }
@@ -108,7 +117,7 @@ HALCameraFactory::~HALCameraFactory()
 
 int HALCameraFactory::cameraDeviceOpen(int camera_id, hw_device_t** device)
 {
-    LOGD("%s: id = %d", __FUNCTION__, camera_id);
+    LOGV("%s: id = %d", __FUNCTION__, camera_id);
 
     *device = NULL;
 
@@ -123,18 +132,12 @@ int HALCameraFactory::cameraDeviceOpen(int camera_id, hw_device_t** device)
         return -EINVAL;
     }
 
-	if (mHardwareCameras[camera_id]->Initialize() != NO_ERROR) 
-	{
-		LOGE("%s: Unable to Initialize camera class", __FUNCTION__);
-		return -EINVAL;
-	}
-	
     return mHardwareCameras[camera_id]->connectCamera(device);
 }
 
 int HALCameraFactory::getCameraInfo(int camera_id, struct camera_info* info)
 {
-    LOGD("%s: id = %d", __FUNCTION__, camera_id);
+    LOGV("%s: id = %d", __FUNCTION__, camera_id);
 
     if (!isConstructedOK()) {
         LOGE("%s: HALCameraFactory has failed to initialize", __FUNCTION__);

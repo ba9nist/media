@@ -1,4 +1,4 @@
-#define LOG_NDEBUG 0
+// #define LOG_NDEBUG 0
 #define LOG_TAG "CCameraConfig"
 #include <utils/Log.h>
 
@@ -75,12 +75,11 @@ MEMBER_FUNCTION(SceneMode)
 MEMBER_FUNCTION(WhiteBalance)
 
 CCameraConfig::CCameraConfig(int id)
-	:mhKeyFile(0)
-	,mCurCameraId(id)
-	,mNumberOfCamera(0)
-	,mCameraFacing(0)
-	,mOrientation(0)
-	,mDeviceID(0)
+:mhKeyFile(0)
+,mCurCameraId(id)
+,mNumberOfCamera(0)
+,mCameraFacing(0)
+,mDeviceID(0)
 {
 	mhKeyFile = ::fopen(CAMERA_KEY_CONFIG_PATH, "rb");
 	if (mhKeyFile <= 0)
@@ -122,14 +121,6 @@ CCameraConfig::CCameraConfig(int id)
 	{
 		mDeviceID = atoi(deviceID);
 		LOGV("camera device id %d", mDeviceID);
-	}
-	
-	// get camera orientation
-	char str[4];
-	if(readKey(kCAMERA_ORIENTATION, str))
-	{
-		mOrientation = atoi(str);
-		LOGV("camera orientation %d", mOrientation);
 	}
 }
 
@@ -229,7 +220,6 @@ void CCameraConfig::dumpParameters()
 	LOGV("/*------------------------------------------------------*/");
 	LOGV("camrea id: %d", mCurCameraId);
 	LOGV("camera facing %s", (mCameraFacing == 0) ? "back" : "front");
-	LOGV("camera orientation %d", mOrientation);
 	LOGV("camera device %s", mCameraDevice);
 	DUMP_PARAMETERS(PREVIEW_SIZE, PreviewSize)
 	DUMP_PARAMETERS(PICTURE_SIZE, PictureSize)

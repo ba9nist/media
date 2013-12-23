@@ -17,8 +17,6 @@
 #ifndef HW_EMULATOR_CAMERA_PREVIEW_WINDOW_H
 #define HW_EMULATOR_CAMERA_PREVIEW_WINDOW_H
 
-#include <ui/Rect.h>
-
 /*
  * Contains declaration of a class PreviewWindow that encapsulates functionality
  * of a preview window set via set_preview_window camera HAL API.
@@ -102,18 +100,15 @@ public:
      * camera_dev - Camera device instance that delivered the frame.
      */
     bool onNextFrameAvailable(const void* frame,
-							  int video_fmt,
                               nsecs_t timestamp,
                               V4L2Camera* camera_dev,
                               bool bUseMataData);
 
 	bool onNextFrameAvailableSW(const void* frame,
-							  int video_fmt,
                               nsecs_t timestamp,
                               V4L2Camera* camera_dev);
 
 	bool onNextFrameAvailableHW(const void* frame,
-							  int video_fmt,
                               nsecs_t timestamp,
                               V4L2Camera* camera_dev);
 
@@ -171,26 +166,12 @@ public:
 	int setLayerFormat(int fmt);
 	int setScreenID(int id);
 
-	inline bool isLayerShowHW()
-	{
-		return (mLayerShowHW == 1) ? true : false;
-	}
-
-	inline void setCrop(Rect * rc, int zoom_value)
-	{
-		mNewCrop = true;
-		memcpy(&mRectCrop, rc, sizeof(Rect));
-	}
-
 protected:
 	bool							mOverlayFirstFrame;
 	bool							mShouldAdjustDimensions;
 	int								mLayerShowHW;
 	int								mLayerFormat;
 	int								mScreenID;
-
-	bool							mNewCrop;
-	Rect							mRectCrop;
 };
 
 }; /* namespace android */

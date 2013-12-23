@@ -33,9 +33,6 @@ static void _YUV420SToRGB565(const uint8_t* Y,
                              int width,
                              int height)
 {
-struct timeval tv;
-gettimeofday(&tv,NULL);
-LOGD("_YUV420SToRGB565 TIME1  =  %u",tv.tv_usec);
     const uint8_t* U_pos = U;
     const uint8_t* V_pos = V;
 
@@ -56,8 +53,6 @@ LOGD("_YUV420SToRGB565 TIME1  =  %u",tv.tv_usec);
             V = V_pos;
         }
     }
-gettimeofday(&tv,NULL);
-LOGD("_YUV420SToRGB565 TIME2  =  %u",tv.tv_usec);
 }
 
 static void _YUV420SToRGB32(const uint8_t* Y,
@@ -68,9 +63,6 @@ static void _YUV420SToRGB32(const uint8_t* Y,
                             int width,
                             int height)
 {
-struct timeval tv;
-gettimeofday(&tv,NULL);
-LOGD("YUV420SToRGB32 TIME1  =  %u",tv.tv_usec);
     const uint8_t* U_pos = U;
     const uint8_t* V_pos = V;
 
@@ -91,50 +83,33 @@ LOGD("YUV420SToRGB32 TIME1  =  %u",tv.tv_usec);
             V = V_pos;
         }
     }
-gettimeofday(&tv,NULL);
-LOGD("YUV420SToRGB32 TIME2  =  %u",tv.tv_usec);
 }
 
 void YV12ToRGB565(const void* yv12, void* rgb, int width, int height)
 {
-struct timeval tv;
-gettimeofday(&tv,NULL);
-LOGD("YV12ToRGB565 TIME1  =  %u",tv.tv_usec);
     const int pix_total = width * height;
     const uint8_t* Y = reinterpret_cast<const uint8_t*>(yv12);
     const uint8_t* U = Y + pix_total;
     const uint8_t* V = U + pix_total / 4;
     _YUV420SToRGB565(Y, U, V, 1, reinterpret_cast<uint16_t*>(rgb), width, height);
-gettimeofday(&tv,NULL);
-LOGD("YV12ToRGB565 TIME2  =  %u",tv.tv_usec);
 }
 
 void YV12ToRGB32(const void* yv12, void* rgb, int width, int height)
 {
-struct timeval tv;
-gettimeofday(&tv,NULL);
-LOGD("YV12ToRGB32 TIME1  =  %u",tv.tv_usec);
     const int pix_total = width * height;
     const uint8_t* Y = reinterpret_cast<const uint8_t*>(yv12);
     const uint8_t* V = Y + pix_total;
     const uint8_t* U = V + pix_total / 4;
     _YUV420SToRGB32(Y, U, V, 1, reinterpret_cast<uint32_t*>(rgb), width, height);
-gettimeofday(&tv,NULL);
-LOGD("YV12ToRGB32 TIME2  =  %u",tv.tv_usec);
 }
 
 void YU12ToRGB32(const void* yu12, void* rgb, int width, int height)
 {
-struct timeval tv;
-gettimeofday(&tv,NULL);
-LOGD("YU12ToRGB32 TIME1  =  %u",tv.tv_usec);
     const int pix_total = width * height;
     const uint8_t* Y = reinterpret_cast<const uint8_t*>(yu12);
     const uint8_t* U = Y + pix_total;
     const uint8_t* V = U + pix_total / 4;
     _YUV420SToRGB32(Y, U, V, 1, reinterpret_cast<uint32_t*>(rgb), width, height);
-gettimeofday(&tv,NULL);
-LOGD("YU12ToRGB32 TIME2  =  %u",tv.tv_usec);
 }
 
 /* Common converter for YUV 4:2:0 interleaved to RGB565.
@@ -147,12 +122,7 @@ static void _NVXXToRGB565(const uint8_t* Y,
                           int width,
                           int height)
 {
-struct timeval tv;
-gettimeofday(&tv,NULL);
-LOGD("_NVXXToRGB565 TIME1  =  %u",tv.tv_usec);
     _YUV420SToRGB565(Y, U, V, 2, rgb, width, height);
-gettimeofday(&tv,NULL);
-LOGD("_NVXXToRGB565 TIME2  =  %u",tv.tv_usec);
 }
 
 /* Common converter for YUV 4:2:0 interleaved to RGB32.
@@ -165,64 +135,39 @@ static void _NVXXToRGB32(const uint8_t* Y,
                          int width,
                          int height)
 {
-struct timeval tv;
-gettimeofday(&tv,NULL);
-LOGD("_NVXXToRGB32 TIME1  =  %u",tv.tv_usec);
     _YUV420SToRGB32(Y, U, V, 2, rgb, width, height);
-gettimeofday(&tv,NULL);
-LOGD("_NVXXToRGB32 TIME2  =  %u",tv.tv_usec);
 }
 
 void NV12ToRGB565(const void* nv12, void* rgb, int width, int height)
 {
-struct timeval tv;
-gettimeofday(&tv,NULL);
-LOGD("NV12ToRGB565 TIME1  =  %u",tv.tv_usec);
     const int pix_total = width * height;
     const uint8_t* y = reinterpret_cast<const uint8_t*>(nv12);
     _NVXXToRGB565(y, y + pix_total, y + pix_total + 1,
                   reinterpret_cast<uint16_t*>(rgb), width, height);
-gettimeofday(&tv,NULL);
-LOGD("NV12ToRGB565 TIME2  =  %u",tv.tv_usec);
 }
 
 void NV12ToRGB32(const void* nv12, void* rgb, int width, int height)
 {
-struct timeval tv;
-gettimeofday(&tv,NULL);
-LOGD("NV12ToRGB32 TIME1  =  %u",tv.tv_usec);
     const int pix_total = width * height;
     const uint8_t* y = reinterpret_cast<const uint8_t*>(nv12);
     _NVXXToRGB32(y, y + pix_total, y + pix_total + 1,
                  reinterpret_cast<uint32_t*>(rgb), width, height);
-gettimeofday(&tv,NULL);
-LOGD("NV12ToRGB32 TIME2  =  %u",tv.tv_usec);
 }
 
 void NV21ToRGB565(const void* nv21, void* rgb, int width, int height)
 {
-struct timeval tv;
-gettimeofday(&tv,NULL);
-LOGD("NV21ToRGB565 TIME1  =  %u",tv.tv_usec);
     const int pix_total = width * height;
     const uint8_t* y = reinterpret_cast<const uint8_t*>(nv21);
     _NVXXToRGB565(y, y + pix_total + 1, y + pix_total,
                   reinterpret_cast<uint16_t*>(rgb), width, height);
-gettimeofday(&tv,NULL);
-LOGD("NV21ToRGB565 TIME2  =  %u",tv.tv_usec);
 }
 
 void NV21ToRGB32(const void* nv21, void* rgb, int width, int height)
 {
-struct timeval tv;
-gettimeofday(&tv,NULL);
-LOGD("NV21ToRGB32 TIME1  =  %u",tv.tv_usec);
     const int pix_total = width * height;
     const uint8_t* y = reinterpret_cast<const uint8_t*>(nv21);
     _NVXXToRGB32(y, y + pix_total + 1, y + pix_total,
                  reinterpret_cast<uint32_t*>(rgb), width, height);
-gettimeofday(&tv,NULL);
-LOGD("NV21ToRGB32 TIME1  =  %u",tv.tv_usec);
 }
 
 }; /* namespace android */
